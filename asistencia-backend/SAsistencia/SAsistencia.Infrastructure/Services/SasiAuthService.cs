@@ -1,8 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using SAsistencia.Application.Common.Interfaces;
 using SAsistencia.Application.Features.Auth.DTOs;
+using SAsistencia.Application.Features.Empleados.DTOs;
+using SAsistencia.Application.Features.Organizacion.DTOs;
 using System;
 using System.Collections.Generic;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 
@@ -12,6 +16,7 @@ namespace SAsistencia.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private const int ID_SISTEMA_ASISTENCIA = 21;
 
         public SasiAuthService(HttpClient httpClient, IConfiguration configuration)
@@ -115,6 +120,82 @@ namespace SAsistencia.Infrastructure.Services
                 },
                 Menus = menus
             };
+        }
+
+        public async Task<List<SasiUsuarioItemDto>> ObtenerUsuariosSistemaAsync(
+    int sistemaId = 21,
+    string? token = null,
+    CancellationToken cancellationToken = default)
+        {
+            var baseUrl = _configuration["SasiSettings:BaseUrl"] ?? "https://localhost:44337/SASI/api/";
+            var requestUri = $"{baseUrl.TrimEnd('/')}/sistemas/{sistemaId}/usuarios";
+
+            // 1. Si no vino el token por parámetro, intentar sacarlo de IHttpContextAccessor
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                var httpContext = _httpContextAccessor?.HttpContext;
+                if (httpContext != null && httpContext.Request.Headers.TryGetValue("Authorization", out var headerValue))
+                {
+                    var raw = headerValue.ToString();
+                    token = raw.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        ? raw["Bearer ".Length..].Trim()
+                        : raw.Trim();
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                throw new InvalidOperationException("No se proporcionó un token de autorización válido para consultar SASI.");
+            }
+
+            // 2. Preparar la petición hacia SASI
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, requestUri);
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new InvalidOperationException($"Error al consultar usuarios en SASI ({response.StatusCode}): {errorContent}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<SasiUsuariosResponse>(cancellationToken: cancellationToken);
+            return result?.Datos ?? new List<SasiUsuarioItemDto>();
+        }
+
+        public async Task<List<SasiOficinaItemDto>> ObtenerOficinasActivasAsync(string? token = null, CancellationToken cancellationToken = default)
+        {
+            var baseUrl = _configuration["SasiSettings:BaseUrl"] ?? "https://localhost:44337/SASI/api/";
+            var requestUri = $"{baseUrl.TrimEnd('/')}/oficinas/activas";
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                var httpContext = _httpContextAccessor?.HttpContext;
+                if (httpContext != null && httpContext.Request.Headers.TryGetValue("Authorization", out var headerValue))
+                {
+                    var raw = headerValue.ToString();
+                    token = raw.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        ? raw["Bearer ".Length..].Trim()
+                        : raw.Trim();
+                }
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new InvalidOperationException($"Error al consultar oficinas en SASI ({response.StatusCode}): {errorContent}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<SasiOficinasResponse>(cancellationToken: cancellationToken);
+            return result?.Datos ?? new List<SasiOficinaItemDto>();
         }
     }
 }

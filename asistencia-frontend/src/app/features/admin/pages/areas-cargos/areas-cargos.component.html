@@ -1,0 +1,302 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="space-y-6">
+
+  <!-- Encabezado -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Estructura Organizacional</h1>
+      <p class="text-slate-400 text-xs mt-1">Gestión de Oficinas (SASI) y Catálogo de Cargos con reglas de marcación</p>
+    </div>
+
+    <!-- Selector de Pestañas / Tabs -->
+    <div class="flex p-1 bg-slate-900 border border-slate-800 rounded-xl">
+      <button 
+        type="button"
+        (click)="tabActiva.set('oficinas')"
+        [ngClass]="tabActiva() === 'oficinas' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+      >
+        <i class="pi pi-building text-xs"></i>
+        <span>Áreas u Oficinas ({{ totalOficinas() }})</span>
+      </button>
+
+      <button 
+        type="button"
+        (click)="tabActiva.set('cargos')"
+        [ngClass]="tabActiva() === 'cargos' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+      >
+        <i class="pi pi-briefcase text-xs"></i>
+        <span>Cargos ({{ totalCargos() }})</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- VISTA 1: OFICINAS / ÁREAS (SASI) -->
+  @if (tabActiva() === 'oficinas') {
+    <div class="space-y-4">
+      
+      <!-- Barra de Acciones y Buscador -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="relative w-full sm:w-80">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+            <i class="pi pi-search text-xs"></i>
+          </div>
+          <input 
+            type="text" 
+            [value]="filtroOficinasTexto()"
+            (input)="onBuscarOficinas($event)"
+            placeholder="Buscar por oficina o sigla (ej. OGTI)..."
+            class="w-full pl-9 pr-8 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs text-slate-200 placeholder-slate-500 transition-all outline-none"
+          />
+          @if (filtroOficinasTexto()) {
+            <button 
+              type="button"
+              (click)="limpiarFiltroOficinas()"
+              class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+            >
+              <i class="pi pi-times text-xs"></i>
+            </button>
+          }
+        </div>
+
+        <button 
+          type="button"
+          (click)="sincronizarOficinas()" 
+          [disabled]="cargando()"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/25 transition-all cursor-pointer disabled:opacity-50"
+        >
+          <i class="pi pi-sync" [class.pi-spin]="cargando()"></i>
+          <span>Sincronizar Oficinas desde SASI</span>
+        </button>
+      </div>
+
+      <!-- Tabla de Oficinas -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden">
+        <p-table 
+          [value]="oficinasFiltradas()" 
+          dataKey="id" 
+          [paginator]="true" 
+          [rows]="10" 
+          [loading]="cargando()"
+          styleClass="p-datatable-sm"
+          responsiveLayout="scroll"
+        >
+          <ng-template #header>
+            <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+              <th class="py-3 px-4 text-left">Id</th>
+              <th class="py-3 px-4 text-left">Sigla</th>
+              <th class="py-3 px-4 text-left">Nombre de la Oficina</th>
+              <th class="py-3 px-4 text-left">Dependencia Jerárquica (Padre)</th>
+              <th class="py-3 px-4 text-center">Empleados</th>
+              <th class="py-3 px-4 text-center">Estado</th>
+            </tr>
+          </ng-template>
+
+          <ng-template #body let-ofi>
+            <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+              <td class="py-3 px-4 font-mono text-slate-400">#{{ ofi.id }}</td>
+              <td class="py-3 px-4">
+                <span class="font-mono text-indigo-400 font-semibold px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
+                  {{ ofi.sigla }}
+                </span>
+              </td>
+              <td class="py-3 px-4 font-semibold text-slate-200">{{ ofi.nombre }}</td>
+              <td class="py-3 px-4 text-slate-400">
+                <i class="pi pi-arrow-elbow-down-right text-[10px] text-slate-600 mr-1"></i>
+                {{ ofi.nombreOficinaPadre }}
+              </td>
+              <td class="py-3 px-4 text-center font-semibold text-slate-300">
+                {{ ofi.totalEmpleados }}
+              </td>
+              <td class="py-3 px-4 text-center">
+                @if (ofi.activo) {
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Activa</span>
+                } @else {
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Inactiva</span>
+                }
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="6" class="text-center py-8 text-slate-400 text-xs">
+                No se encontraron áreas u oficinas que coincidan con la búsqueda.
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+    </div>
+  }
+
+  <!-- VISTA 2: CARGOS (GESTIÓN LOCAL) -->
+  @if (tabActiva() === 'cargos') {
+    <div class="space-y-4">
+      
+      <!-- Barra de Acciones Cargos -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="relative w-full sm:w-80">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+            <i class="pi pi-search text-xs"></i>
+          </div>
+          <input 
+            type="text" 
+            [value]="filtroCargosTexto()"
+            (input)="onBuscarCargos($event)"
+            placeholder="Buscar cargo o descripción..."
+            class="w-full pl-9 pr-8 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs text-slate-200 placeholder-slate-500 transition-all outline-none"
+          />
+          @if (filtroCargosTexto()) {
+            <button 
+              type="button"
+              (click)="limpiarFiltroCargos()"
+              class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+            >
+              <i class="pi pi-times text-xs"></i>
+            </button>
+          }
+        </div>
+
+        <button 
+          type="button"
+          (click)="abrirCrearCargo()" 
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+        >
+          <i class="pi pi-plus"></i>
+          <span>Nuevo Cargo</span>
+        </button>
+      </div>
+
+      <!-- Tabla de Cargos -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden">
+        <p-table 
+          [value]="cargosFiltrados()" 
+          dataKey="id" 
+          [paginator]="true" 
+          [rows]="10" 
+          styleClass="p-datatable-sm"
+          responsiveLayout="scroll"
+        >
+          <ng-template #header>
+            <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+              <th class="py-3 px-4 text-left">Puesto / Cargo</th>
+              <th class="py-3 px-4 text-left">Descripción</th>
+              <th class="py-3 px-4 text-center">Regla de Marcación</th>
+              <th class="py-3 px-4 text-center">Colaboradores</th>
+              <th class="py-3 px-4 text-center">Estado</th>
+              <th class="py-3 px-4 text-center">Acciones</th>
+            </tr>
+          </ng-template>
+
+          <ng-template #body let-c>
+            <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+              <td class="py-3 px-4 font-semibold text-slate-200">{{ c.nombre }}</td>
+              <td class="py-3 px-4 text-slate-400">{{ c.descripcion || 'Sin descripción' }}</td>
+              <td class="py-3 px-4 text-center">
+                @if (c.exoneradoMarcacion) {
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <i class="pi pi-shield mr-1"></i> Exonerado
+                  </span>
+                } @else {
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    Obligatorio
+                  </span>
+                }
+              </td>
+              <td class="py-3 px-4 text-center font-semibold text-slate-300">{{ c.totalEmpleados }}</td>
+              <td class="py-3 px-4 text-center">
+                @if (c.activo) {
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Activo</span>
+                } @else {
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Inactivo</span>
+                }
+              </td>
+              <td class="py-3 px-4 text-center">
+                <button 
+                  type="button"
+                  (click)="abrirEditarCargo(c)"
+                  pTooltip="Editar Cargo"
+                  class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <i class="pi pi-pencil text-sm"></i>
+                </button>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="6" class="text-center py-8 text-slate-400 text-xs">
+                No se encontraron cargos que coincidan con la búsqueda.
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+    </div>
+  }
+
+  <!-- Modal: Crear / Editar Cargo -->
+  <p-dialog 
+    [(visible)]="dialogCargo" 
+    [modal]="true" 
+    [header]="esNuevoCargo() ? 'Registrar Nuevo Cargo' : 'Editar Cargo'"
+    [style]="{ width: '420px' }"
+  >
+    <div class="space-y-4 pt-2 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Nombre del Cargo *</label>
+        <input 
+          type="text" 
+          class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500" 
+          [(ngModel)]="cargoForm.nombre" 
+          placeholder="Ej. Analista Programador" 
+        />
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Descripción / Función</label>
+        <textarea 
+          rows="3" 
+          class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500" 
+          [(ngModel)]="cargoForm.descripcion" 
+          placeholder="Detalles sobre las responsabilidades del puesto..."
+        ></textarea>
+      </div>
+
+      <div class="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+        <div>
+          <span class="block font-semibold text-slate-200">Exonerado de Marcación</span>
+          <span class="text-[11px] text-slate-400">No computa faltas ni tardanzas en reportes</span>
+        </div>
+        <input 
+          type="checkbox" 
+          class="h-4 w-4 rounded accent-indigo-600 cursor-pointer" 
+          [(ngModel)]="cargoForm.exoneradoMarcacion" 
+        />
+      </div>
+
+      @if (!esNuevoCargo()) {
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-slate-300">Cargo Activo</span>
+          <input 
+            type="checkbox" 
+            class="h-4 w-4 rounded accent-emerald-600 cursor-pointer" 
+            [(ngModel)]="cargoForm.activo" 
+          />
+        </div>
+      }
+    </div>
+
+    <div class="flex justify-end gap-2 mt-6">
+      <button type="button" (click)="dialogCargo.set(false)" class="px-3 py-2 text-slate-400 hover:text-white text-xs cursor-pointer">Cancelar</button>
+      <button type="button" (click)="guardarCargo()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer">Guardar</button>
+    </div>
+  </p-dialog>
+
+</div>

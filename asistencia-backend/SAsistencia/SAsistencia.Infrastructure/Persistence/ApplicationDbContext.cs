@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SAsistencia.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -13,9 +14,10 @@ namespace SAsistencia.Infrastructure.Persistence
         {
         }
 
-        // Aquí registraremos los DbSet cuando creemos las entidades (ej. Empleados, Asistencias)
-        // public DbSet<Empleado> Empleados => Set<Empleado>();
-        // public DbSet<Asistencia> Asistencias => Set<Asistencia>();
+        public DbSet<Empleado> Empleados => Set<Empleado>();
+        public DbSet<Turno> Turnos => Set<Turno>();
+        public DbSet<Oficina> Oficinas => Set<Oficina>();
+        public DbSet<Cargo> Cargos => Set<Cargo>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

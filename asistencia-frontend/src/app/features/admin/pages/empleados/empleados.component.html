@@ -1,0 +1,315 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="space-y-6">
+  
+  <!-- Encabezado Principal y Botón de Sincronización -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Gestión de Personal</h1>
+      </div>
+      <p class="text-slate-400 text-xs mt-1">Control de colaboradores sincronizados con SASI, asignación de DNI y carnets QR</p>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <button 
+        type="button"
+        (click)="sincronizarConSasi()" 
+        [disabled]="cargando()"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/25 transition-all cursor-pointer disabled:opacity-50"
+      >
+        <i class="pi pi-sync" [class.pi-spin]="cargando()"></i>
+        <span>Sincronizar desde SASI</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TARJETAS DE MÉTRICAS / CONTEO ESTILIZADAS -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    
+    <!-- 1. Total de Empleados -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
+      <div>
+        <span class="text-xs font-medium text-slate-400">Total Colaboradores</span>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-extrabold text-white tracking-tight">{{ totalEmpleados() }}</span>
+          <span class="text-[11px] text-slate-500">registrados</span>
+        </div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+        <i class="pi pi-users text-lg"></i>
+      </div>
+    </div>
+
+    <!-- 2. Habilitados para marcar -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
+      <div>
+        <span class="text-xs font-medium text-slate-400">Habilitados para Marcar</span>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-extrabold text-emerald-400 tracking-tight">{{ totalHabilitados() }}</span>
+          <span class="text-[11px] text-emerald-500/80">activos</span>
+        </div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+        <i class="pi pi-check-circle text-lg"></i>
+      </div>
+    </div>
+
+    <!-- 3. Bloqueados -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
+      <div>
+        <span class="text-xs font-medium text-slate-400">Marcación Bloqueada</span>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-extrabold text-rose-400 tracking-tight">{{ totalBloqueados() }}</span>
+          <span class="text-[11px] text-rose-500/80">inactivos</span>
+        </div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+        <i class="pi pi-ban text-lg"></i>
+      </div>
+    </div>
+
+    <!-- 4. Pendientes de DNI -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden group hover:border-slate-700 transition-all">
+      <div>
+        <span class="text-xs font-medium text-slate-400">DNI Pendiente</span>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-extrabold text-amber-400 tracking-tight">{{ totalSinDni() }}</span>
+          <span class="text-[11px] text-amber-500/80">por asignar</span>
+        </div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+        <i class="pi pi-exclamation-circle text-lg"></i>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TABLA DE EMPLEADOS -->
+  <!-- TABLA DE EMPLEADOS -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden">
+    
+    <!-- Barra de Herramientas: Título + Buscador -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-2 border-b border-slate-800/80">
+      
+      <!-- Lado Izquierdo: Título y Contador -->
+      <div class="flex items-center gap-2.5">
+        <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+          <i class="pi pi-list text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-200">Padrón de Personal</h2>
+          <p class="text-[11px] text-slate-400">
+            Total: <span class="text-indigo-400 font-semibold">{{ totalEmpleados() }}</span> colaboradores
+          </p>
+        </div>
+      </div>
+
+      <!-- Lado Derecho: Input Buscador Estilizado -->
+      <div class="flex items-center gap-2">
+        <div class="relative w-full sm:w-72">
+          <!-- Ícono de Lupa -->
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+            <i class="pi pi-search text-xs"></i>
+          </div>
+          
+          <!-- Input -->
+          <input 
+            type="text" 
+            [value]="textoFiltro()"
+            (input)="onBuscar($event)"
+            placeholder="Buscar por nombre, DNI o cargo..."
+            class="w-full pl-9 pr-8 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs text-slate-200 placeholder-slate-500 transition-all outline-none"
+          />
+
+          <!-- Botón X para limpiar búsqueda cuando hay texto -->
+          @if (textoFiltro()) {
+            <button 
+              type="button"
+              (click)="limpiarBusqueda()"
+              class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+            >
+              <i class="pi pi-times text-xs"></i>
+            </button>
+          }
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tabla con Referencia #dt y GlobalFilterFields -->
+    <p-table 
+      [value]="empleadosFiltrados()" 
+      dataKey="id" 
+      [paginator]="true" 
+      [rows]="10" 
+      [loading]="cargando()"
+      styleClass="p-datatable-sm"
+      responsiveLayout="scroll"
+    >
+      <!-- Encabezado con #header -->
+      <ng-template #header>
+        <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+          <th class="py-3 px-4 text-left">Colaborador</th>
+          <th class="py-3 px-4 text-left">Área (SASI)</th>
+          <th class="py-3 px-4 text-left">Cargo Asignado</th>
+          <th class="py-3 px-4 text-left">DNI</th>
+          <th class="py-3 px-4 text-left">Turno</th>
+          <th class="py-3 px-4 text-left">Código QR</th>
+          <th class="py-3 px-4 text-center">Estado Marcación</th>
+          <th class="py-3 px-4 text-center">Acciones</th>
+        </tr>
+      </ng-template>
+
+      <!-- Cuerpo con #body -->
+      <ng-template #body let-emp>
+        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+          <td class="py-3 px-4">
+            <div class="font-semibold text-slate-200">{{ emp.nombreCompleto }}</div>
+            <div class="text-[11px] text-slate-400 font-mono">{{ emp.email }}</div>
+          </td>
+          <td class="py-3 px-4">
+            <span class="text-slate-300">{{ emp.oficinaNombre || 'Sin área asignada' }}</span>
+          </td>
+          <td class="py-3 px-4">
+            @if (emp.cargoNombre && emp.cargoNombre !== 'Sin cargo asignado') {
+              <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                {{ emp.cargoNombre }}
+              </span>
+            } @else {
+              <span class="text-slate-500 italic">Sin cargo</span>
+            }
+          </td>
+          <td class="py-3 px-4">
+            @if (emp.dni) {
+              <span class="font-mono text-slate-200 bg-slate-800 px-2 py-1 rounded border border-slate-700">{{ emp.dni }}</span>
+            } @else {
+              <span class="text-amber-400 italic">No registrado</span>
+            }
+          </td>
+          <td class="py-3 px-4">
+            <span class="text-slate-300">{{ emp.turnoNombre }}</span>
+          </td>
+          <td class="py-3 px-4">
+            <span class="font-mono text-indigo-400 text-[11px] bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20">{{ emp.codigoQr }}</span>
+          </td>
+          <td class="py-3 px-4 text-center">
+            @if (emp.habilitadoParaMarcar) {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Habilitado</span>
+            } @else {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Bloqueado</span>
+            }
+          </td>
+          <td class="py-3 px-4 text-center">
+            <div class="inline-flex items-center gap-1.5">
+              <button 
+                type="button"
+                (click)="verCarnetQr(emp)"
+                pTooltip="Ver Fotocheck / QR"
+                class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <i class="pi pi-qrcode text-sm"></i>
+              </button>
+              <button 
+                type="button"
+                (click)="abrirEdicion(emp)"
+                pTooltip="Editar Asignación"
+                class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              >
+                <i class="pi pi-user-edit text-sm"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <!-- Mensaje Vacío con #emptymessage -->
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="6" class="text-center py-8 text-slate-400 text-xs">
+            No se encontraron empleados que coincidan con la búsqueda.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- Modal: Edición de Datos de Marcación -->
+  <p-dialog 
+    [(visible)]="dialogEdicion" 
+    [modal]="true" 
+    header="Configurar Empleado para Marcación"
+    [style]="{ width: '420px' }"
+  >
+    @if (empleadoSeleccionado) {
+      <div class="space-y-4 pt-2 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Colaborador</label>
+          <input type="text" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400" [value]="empleadoSeleccionado.nombreCompleto" disabled />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Área / Oficina (SASI)</label>
+          <div class="p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 flex items-center gap-2">
+            <i class="pi pi-building text-xs text-indigo-400"></i>
+            <span>{{ empleadoSeleccionado.oficinaNombre || 'Sin área asignada en SASI' }}</span>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Cargo Institucional *</label>
+          <select 
+            class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500 cursor-pointer"
+            [(ngModel)]="empleadoSeleccionado.cargoId"
+          >
+            <option [ngValue]="null">-- Seleccionar Cargo --</option>
+            @for (c of cargos(); track c.id) {
+              <option [ngValue]="c.id">
+                {{ c.nombre }} {{ c.exoneradoMarcacion ? '(Exonerado)' : '' }}
+              </option>
+            }
+          </select>
+          <span class="text-[10px] text-slate-500 mt-1 block">Los cargos se gestionan desde el submenú "Áreas y Cargos".</span>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">DNI para Marcación Numérica</label>
+          <input type="text" maxlength="15" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white" [(ngModel)]="empleadoSeleccionado.dni" placeholder="Ej. 05961829" />
+        </div>
+        <div class="flex items-center justify-between pt-2">
+          <span class="text-slate-300">Permitir marcar asistencia</span>
+          <input type="checkbox" class="h-4 w-4 rounded accent-indigo-600 cursor-pointer" [(ngModel)]="empleadoSeleccionado.habilitadoParaMarcar" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button type="button" (click)="dialogEdicion.set(false)" class="px-3 py-2 text-slate-400 hover:text-white text-xs cursor-pointer">Cancelar</button>
+        <button type="button" (click)="guardarEdicion()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer">Guardar Cambios</button>
+      </div>
+    }
+  </p-dialog>
+
+  <!-- Modal: Visualizador de QR / Carnet -->
+  <p-dialog 
+    [(visible)]="dialogQr" 
+    [modal]="true" 
+    header="Carnet de Marcación QR"
+    [style]="{ width: '380px' }"
+  >
+    @if (empleadoSeleccionado) {
+      <div class="text-center py-3 flex flex-col items-center">
+        <div class="p-3 bg-white rounded-2xl shadow-lg inline-block mb-3">
+          <img [src]="qrDataUrl()" alt="Código QR" class="w-48 h-48" />
+        </div>
+        <h3 class="text-sm font-bold text-white">{{ empleadoSeleccionado.nombreCompleto }}</h3>
+        <p class="text-xs text-slate-400 font-mono mt-0.5">DNI: {{ empleadoSeleccionado.dni || 'No registrado' }}</p>
+        <span class="text-[10px] text-indigo-400 font-mono mt-1 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+          TOKEN: {{ empleadoSeleccionado.codigoQr }}
+        </span>
+
+        <div class="flex items-center gap-2 mt-5">
+          <button type="button" (click)="regenerarCodigo()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer">
+            <i class="pi pi-refresh"></i> Regenerar QR
+          </button>
+        </div>
+      </div>
+    }
+  </p-dialog>
+
+</div>

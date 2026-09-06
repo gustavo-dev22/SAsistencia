@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SAsistencia.Application.Common.Interfaces;
 using SAsistencia.Infrastructure.Persistence;
+using SAsistencia.Infrastructure.Repositories;
 using SAsistencia.Infrastructure.Services;
 using System;
 using System.Collections.Generic;
@@ -33,6 +34,10 @@ namespace SAsistencia.Infrastructure
                     ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
                 };
             });
+
+            services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IOrganizacionRepository, OrganizacionRepository>();
 
             return services;
         }
