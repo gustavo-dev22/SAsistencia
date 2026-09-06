@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SAsistencia.Api/SAsistencia.Api.csproj" />
+  <Project Path="SAsistencia.Application/SAsistencia.Application.csproj" />
+  <Project Path="SAsistencia.Domain/SAsistencia.Domain.csproj" />
+  <Project Path="SAsistencia.Infrastructure/SAsistencia.Infrastructure.csproj" />
+</Solution>

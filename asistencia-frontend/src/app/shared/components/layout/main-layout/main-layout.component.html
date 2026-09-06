@@ -1,0 +1,139 @@
+<p-confirmdialog></p-confirmdialog>
+
+<div class="min-h-screen bg-slate-950 text-slate-100 flex overflow-hidden">
+
+  <!-- BARRA LATERAL FIJA (SIDEBAR SIEMPRE ABIERTO) -->
+  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between z-30 shrink-0 select-none">
+    
+    <!-- Cabecera Sidebar / Logo -->
+    <div>
+      <div class="h-16 flex items-center px-4 border-b border-slate-800/80">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/30">
+            <i class="pi pi-clock text-white text-lg"></i>
+          </div>
+          <div class="flex flex-col whitespace-nowrap">
+            <span class="font-bold text-base tracking-tight text-white">SAsistencia</span>
+            <span class="text-[10px] uppercase tracking-wider text-indigo-400 font-semibold">Institucional</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menús y Submenús siempre visibles -->
+      <nav class="p-3 space-y-2 overflow-y-auto max-h-[calc(100vh-8rem)] custom-scroll">
+        @for (item of menus(); track item.idObjeto) {
+
+          <!-- Opción A: Menú con Submenús (Siempre Expandido) -->
+          @if (item.submenus && item.submenus.length > 0) {
+            <div class="space-y-1">
+              <!-- Título / Encabezado de Categoría -->
+              <div class="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <i [class]="item.icono || 'pi pi-folder'" class="text-indigo-400 text-sm"></i>
+                <span class="truncate">{{ item.nombre }}</span>
+              </div>
+
+              <!-- Lista fija de submenús -->
+              <div class="pl-4 pr-1 space-y-1 border-l border-slate-800 ml-4">
+                @for (sub of item.submenus; track sub.idObjeto) {
+                  <a 
+                    [routerLink]="sub.url"
+                    routerLinkActive="bg-indigo-600/20 text-indigo-400 font-semibold border-indigo-500/30 border"
+                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
+                  >
+                    <i [class]="sub.icono || 'pi pi-circle-fill'" class="text-[11px] shrink-0"></i>
+                    <span class="truncate">{{ sub.nombre }}</span>
+                  </a>
+                }
+              </div>
+            </div>
+
+          } @else {
+
+            <!-- Opción B: Enlace directo sin submenús -->
+            <a 
+              [routerLink]="item.url"
+              routerLinkActive="bg-indigo-600 text-white font-medium shadow-md shadow-indigo-600/30"
+              class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
+            >
+              <i [class]="item.icono || 'pi pi-link'" class="text-base shrink-0 text-indigo-400"></i>
+              <span class="truncate">{{ item.nombre }}</span>
+            </a>
+          }
+
+        }
+      </nav>
+    </div>
+
+    <!-- Pie del Sidebar: Botón Quiosco -->
+    <div class="p-3 border-t border-slate-800/80 bg-slate-900/50">
+      <a 
+        routerLink="/quiosco" 
+        target="_blank"
+        class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-indigo-400 hover:text-indigo-300 text-xs font-semibold transition-colors border border-slate-700/60"
+      >
+        <i class="pi pi-qrcode text-sm"></i>
+        <span>Abrir Quiosco</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- CONTENEDOR DERECHO: TOPBAR + CONTENIDO DINÁMICO -->
+  <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+    
+    <!-- TOPBAR SUPERIOR -->
+    <header class="h-16 bg-slate-900 border-b border-slate-800 px-6 flex items-center justify-between shrink-0">
+      
+      <!-- Título de Oficina / Contexto -->
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-400 hidden sm:inline">Dependencia:</span>
+        <span class="text-xs font-semibold text-slate-200 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/60 truncate max-w-xs md:max-w-md">
+          <i class="pi pi-building text-indigo-400 mr-1.5"></i>
+          {{ usuario()?.oficina || 'Oficina Central' }}
+        </span>
+      </div>
+
+      <!-- Perfil de Usuario y Acciones -->
+      <div class="flex items-center gap-4">
+        
+        <!-- Badge de Rol Activo -->
+        <span class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          {{ rol()?.nombreRol || 'SUPER_ADMIN' }}
+        </span>
+
+        <div class="h-6 w-px bg-slate-800 hidden sm:block"></div>
+
+        <!-- Usuario Avatar & Datos -->
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white font-bold text-xs flex items-center justify-center shadow-md">
+            {{ iniciales() }}
+          </div>
+          <div class="hidden lg:flex flex-col text-left">
+            <span class="text-xs font-semibold text-slate-200 truncate max-w-[180px]">
+              {{ usuario()?.nombreCompleto }}
+            </span>
+            <span class="text-[11px] text-slate-400 font-mono">&#64;{{ usuario()?.userName }}</span>
+          </div>
+        </div>
+
+        <!-- Botón Salir -->
+        <button 
+          (click)="cerrarSesion($event)" 
+          class="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+          pTooltip="Cerrar sesión" 
+          tooltipPosition="bottom"
+        >
+          <i class="pi pi-sign-out text-base"></i>
+        </button>
+
+      </div>
+    </header>
+
+    <!-- ÁREA DE PÁGINA (ROUTER OUTLET) -->
+    <main class="flex-1 overflow-y-auto p-6 bg-slate-950">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+
+</div>

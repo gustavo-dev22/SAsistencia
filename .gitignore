@@ -1,0 +1,47 @@
+# ==========================================
+# Archivos de Registro y Salida Local (Logs)
+# ==========================================
+**/Logs/
+**/logs/
+*.log
+
+# ==========================================
+# .NET / C# (Visual Studio / VS Code)
+# ==========================================
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.launchSettings.json.user
+
+# Archivos de configuración local o secretos
+# appsettings.json se versiona como plantilla SIN secretos (los valores reales
+# van en appsettings.Production.json generado por CI o en variables de entorno).
+**/appsettings.Local.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+
+# Archivos subidos en tiempo de ejecución (no versionar)
+**/wwwroot/uploads/
+
+# ==========================================
+# Angular / Node.js
+# ==========================================
+**/node_modules/
+**/dist/
+**/.angular/
+**/.vscode/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# Sistema Operativo
+# ==========================================
+.DS_Store
+Thumbs.db

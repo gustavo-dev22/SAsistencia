@@ -1,0 +1,136 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="min-h-screen w-full flex flex-col md:flex-row bg-slate-950 text-slate-100">
+  
+  <!-- Panel Izquierdo: Branding (Desktop) -->
+  <aside class="hidden md:flex md:w-1/2 lg:w-5/12 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-12 flex-col justify-between border-r border-slate-800 relative overflow-hidden">
+    <div class="absolute -top-32 -left-32 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-80 h-80 bg-cyan-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <header class="relative z-10">
+      <div class="flex items-center gap-3">
+        <div class="h-11 w-11 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 text-white">
+          <i class="pi pi-clock text-xl"></i>
+        </div>
+        <span class="text-xl font-bold tracking-tight text-white">SAsistencia<span class="text-indigo-400">Hub</span></span>
+      </div>
+    </header>
+
+    <div class="relative z-10 my-auto py-12">
+      <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+        Gestión en tiempo real
+      </span>
+      <h1 class="text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight mb-4">
+        Control de acceso y marcaciones sin fricción.
+      </h1>
+      <p class="text-slate-400 text-base leading-relaxed">
+        Plataforma unificada para gestión de horarios, tolerancia de turnos y registro mediante identificadores QR y DNI institucional.
+      </p>
+    </div>
+
+    <footer class="relative z-10 text-xs text-slate-500 flex items-center justify-between border-t border-slate-800 pt-6">
+      <span>Versión 1.0 (Entorno Seguro)</span>
+      <span>&copy; SAsistencia</span>
+    </footer>
+  </aside>
+
+  <!-- Panel Derecho: Formulario -->
+  <main class="w-full md:w-1/2 lg:w-7/12 flex items-center justify-center p-6 sm:p-12 relative bg-slate-950">
+    <div class="w-full max-w-md">
+      
+      <!-- Encabezado -->
+      <div class="mb-8">
+        <div class="md:hidden flex items-center gap-2 mb-6">
+          <div class="h-9 w-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+            <i class="pi pi-clock"></i>
+          </div>
+          <span class="text-lg font-bold text-white">SAsistencia</span>
+        </div>
+        <h2 class="text-3xl font-bold tracking-tight text-white">Iniciar sesión</h2>
+        <p class="text-sm text-slate-400 mt-1">Ingrese sus credenciales corporativas para continuar</p>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-5">
+        
+        <!-- Input Usuario / DNI -->
+        <div>
+          <label for="usuario" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+            Usuario o DNI
+          </label>
+          <div class="relative">
+            <i class="pi pi-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none z-10"></i>
+            <input 
+              id="usuario"
+              type="text" 
+              formControlName="usuario"
+              placeholder="Ej. admin o número de DNI" 
+              class="w-full pl-10 pr-4 py-3 bg-slate-900 border text-slate-100 rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              [ngClass]="campoInvalido('usuario') ? 'border-rose-500' : 'border-slate-800 focus:border-indigo-500'"
+              autocomplete="username"
+            />
+          </div>
+          @if (campoInvalido('usuario')) {
+            <p class="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
+              <i class="pi pi-info-circle text-[11px]"></i> El usuario o DNI es requerido.
+            </p>
+          }
+        </div>
+
+        <!-- Input Contraseña -->
+        <div>
+          <label for="password" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+            Contraseña
+          </label>
+          <div class="relative">
+            <p-password 
+              id="password"
+              formControlName="password" 
+              [toggleMask]="true" 
+              [feedback]="false"
+              placeholder="••••••••"
+              styleClass="w-full"
+            />
+          </div>
+          @if (campoInvalido('password')) {
+            <p class="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
+              <i class="pi pi-info-circle text-[11px]"></i> La contraseña debe contener al menos 4 caracteres.
+            </p>
+          }
+        </div>
+
+        <!-- Enlaces -->
+        <div class="flex items-center justify-between text-xs pt-1">
+          <div class="flex items-center gap-2">
+            <p-checkbox 
+              formControlName="recordarSesion" 
+              [binary]="true" 
+              inputId="recordar"
+            />
+            <label for="recordar" class="text-slate-400 cursor-pointer select-none">Recordar dispositivo</label>
+          </div>
+          <a routerLink="/quiosco" class="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+            Ir a terminal quiosco &rarr;
+          </a>
+        </div>
+
+        <!-- Botón de Ingreso -->
+        <div class="pt-2">
+          <button 
+            type="submit" 
+            [disabled]="cargando()"
+            class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-xl border-none shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer">
+            @if (cargando()) {
+              <i class="pi pi-spin pi-spinner text-lg"></i>
+              <span>Autenticando...</span>
+            } @else {
+              <span>Ingresar al Sistema</span>
+              <i class="pi pi-arrow-right text-sm"></i>
+            }
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+</div>
