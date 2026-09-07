@@ -1,0 +1,36 @@
+@if (loadingService.isLoading()) {
+  <div class="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-sm transition-all duration-300">
+    
+    <!-- Card Central Flotante -->
+    <div class="flex flex-col items-center bg-slate-900 border border-slate-800/80 px-8 py-6 rounded-3xl shadow-2xl shadow-black/80 max-w-sm text-center transform scale-100 animate-in fade-in duration-200">
+      
+      <!-- Spinner PrimeNG estilizado -->
+      <div class="relative flex items-center justify-center mb-4">
+        <p-progress-spinner 
+          strokeWidth="4" 
+          animationDuration=".8s"
+          styleClass="w-14 h-14" 
+          fill="transparent"
+        ></p-progress-spinner>
+        <div class="absolute text-indigo-400 text-sm animate-pulse">
+          <i class="pi pi-bolt"></i>
+        </div>
+      </div>
+
+      <!-- Texto descriptivo -->
+      <h3 class="text-white font-semibold text-sm tracking-tight mb-1">
+        Por favor, espere
+      </h3>
+      <p class="text-xs text-slate-400 font-medium">
+        {{ loadingService.mensaje() }}
+      </p>
+
+      <!-- Barra de progreso simulada decorativa -->
+      <div class="w-36 h-1 bg-slate-800 rounded-full mt-4 overflow-hidden">
+        <div class="w-full h-full bg-indigo-500 origin-left animate-pulse"></div>
+      </div>
+
+    </div>
+
+  </div>
+}

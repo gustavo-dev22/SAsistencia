@@ -1,0 +1,250 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="space-y-6">
+
+  <!-- Encabezado y Acción -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Catálogo de Turnos y Horarios</h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          {{ totalTurnos() }} definidos
+        </span>
+      </div>
+      <p class="text-slate-400 text-xs mt-1">Configuración de ventanas de marcación, tolerancias y refrigerios</p>
+    </div>
+
+    <button 
+      type="button"
+      (click)="abrirCrear()" 
+      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+    >
+      <i class="pi pi-plus"></i>
+      <span>Nuevo Turno</span>
+    </button>
+  </div>
+
+  <!-- Contenedor Principal con Tabla y Buscador -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden">
+    
+    <!-- Barra superior con Buscador -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-2 border-b border-slate-800/80">
+      <div class="flex items-center gap-2.5">
+        <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+          <i class="pi pi-clock text-sm"></i>
+        </div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-200">Plantillas Horarias Activas</span>
+      </div>
+
+      <!-- Buscador -->
+      <div class="relative w-full sm:w-72">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+          <i class="pi pi-search text-xs"></i>
+        </div>
+        <input 
+          type="text" 
+          [value]="filtroTexto()"
+          (input)="onBuscar($event)"
+          placeholder="Buscar turno o descripción..."
+          class="w-full pl-9 pr-8 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs text-slate-200 placeholder-slate-500 transition-all outline-none"
+        />
+        @if (filtroTexto()) {
+          <button 
+            type="button"
+            (click)="limpiarBusqueda()"
+            class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+          >
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Tabla PrimeNG -->
+    <p-table 
+      [value]="turnosFiltrados()" 
+      dataKey="id" 
+      [paginator]="true" 
+      [rows]="10" 
+      [loading]="cargando()"
+      styleClass="p-datatable-sm"
+      responsiveLayout="scroll"
+    >
+      <ng-template #header>
+        <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+          <th class="py-3 px-4 text-left">Turno / Horario</th>
+          <th class="py-3 px-4 text-center">Entrada</th>
+          <th class="py-3 px-4 text-center">Salida</th>
+          <th class="py-3 px-4 text-center">Tolerancia</th>
+          <th class="py-3 px-4 text-center">Refrigerio</th>
+          <th class="py-3 px-4 text-center">Asignados</th>
+          <th class="py-3 px-4 text-center">Estado</th>
+          <th class="py-3 px-4 text-center">Acciones</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-t>
+        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+          <td class="py-3 px-4">
+            <div class="font-semibold text-slate-200">{{ t.nombre }}</div>
+            <div class="text-[11px] text-slate-400">{{ t.descripcion || 'Sin descripción adicional' }}</div>
+          </td>
+          
+          <td class="py-3 px-4 text-center">
+            <span class="font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+              {{ t.horaEntrada }}
+            </span>
+          </td>
+
+          <td class="py-3 px-4 text-center">
+            <span class="font-mono text-indigo-400 font-semibold px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
+              {{ t.horaSalida }}
+            </span>
+          </td>
+
+          <td class="py-3 px-4 text-center text-slate-300">
+            <span class="font-mono">{{ t.toleranciaEntradaMinutos }} min</span>
+            <span class="text-[10px] text-slate-500 block">Límite: {{ t.limiteTardanzaMinutos }} min</span>
+          </td>
+
+          <td class="py-3 px-4 text-center text-slate-300 font-mono">
+            {{ t.minutosRefrigerio }} min
+          </td>
+
+          <td class="py-3 px-4 text-center font-semibold text-slate-300">
+            {{ t.totalEmpleadosAsignados }}
+          </td>
+
+          <td class="py-3 px-4 text-center">
+            @if (t.activo) {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Activo</span>
+            } @else {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Inactivo</span>
+            }
+          </td>
+
+          <td class="py-3 px-4 text-center">
+            <button 
+              type="button"
+              (click)="abrirEditar(t)"
+              pTooltip="Editar Turno"
+              class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              <i class="pi pi-pencil text-sm"></i>
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="8" class="text-center py-8 text-slate-400 text-xs">
+            No se encontraron plantillas de turnos que coincidan con la búsqueda.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- Modal: Crear / Editar Turno -->
+  <p-dialog 
+    [(visible)]="dialogTurno" 
+    [modal]="true" 
+    [header]="esNuevo() ? 'Crear Plantilla de Turno' : 'Editar Turno'"
+    [style]="{ width: '480px' }"
+  >
+    <div class="space-y-4 pt-2 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Nombre del Turno *</label>
+        <input 
+          type="text" 
+          class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500" 
+          [(ngModel)]="turnoForm.nombre" 
+          placeholder="Ej. Administrativo Turno Mañana" 
+        />
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Descripción</label>
+        <input 
+          type="text" 
+          class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500" 
+          [(ngModel)]="turnoForm.descripcion" 
+          placeholder="Ej. De Lunes a Viernes con 1h de refrigerio" 
+        />
+      </div>
+
+      <!-- Horas de Entrada y Salida -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Hora Entrada *</label>
+          <input 
+            type="time" 
+            class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500 cursor-pointer" 
+            [(ngModel)]="turnoForm.horaEntrada" 
+          />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Hora Salida *</label>
+          <input 
+            type="time" 
+            class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500 cursor-pointer" 
+            [(ngModel)]="turnoForm.horaSalida" 
+          />
+        </div>
+      </div>
+
+      <!-- Tolerancias y Refrigerio -->
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Tolerancia (min)</label>
+          <input 
+            type="number" 
+            min="0"
+            max="60"
+            class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500" 
+            [(ngModel)]="turnoForm.toleranciaEntradaMinutos" 
+          />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Lím. Tardanza (min)</label>
+          <input 
+            type="number" 
+            min="0"
+            max="120"
+            class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500" 
+            [(ngModel)]="turnoForm.limiteTardanzaMinutos" 
+          />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Refrigerio (min)</label>
+          <input 
+            type="number" 
+            min="0"
+            max="120"
+            class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500" 
+            [(ngModel)]="turnoForm.minutosRefrigerio" 
+          />
+        </div>
+      </div>
+
+      <!-- Estado Activo -->
+      @if (!esNuevo()) {
+        <div class="flex items-center justify-between pt-2">
+          <span class="text-slate-300">Turno Activo</span>
+          <input 
+            type="checkbox" 
+            class="h-4 w-4 rounded accent-emerald-600 cursor-pointer" 
+            [(ngModel)]="turnoForm.activo" 
+          />
+        </div>
+      }
+    </div>
+
+    <div class="flex justify-end gap-2 mt-6">
+      <button type="button" (click)="dialogTurno.set(false)" class="px-3 py-2 text-slate-400 hover:text-white text-xs cursor-pointer">Cancelar</button>
+      <button type="button" (click)="guardar()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer">Guardar Turno</button>
+    </div>
+  </p-dialog>
+
+</div>

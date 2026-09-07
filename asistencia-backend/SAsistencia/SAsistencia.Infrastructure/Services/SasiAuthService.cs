@@ -19,10 +19,11 @@ namespace SAsistencia.Infrastructure.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private const int ID_SISTEMA_ASISTENCIA = 21;
 
-        public SasiAuthService(HttpClient httpClient, IConfiguration configuration)
+        public SasiAuthService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<LoginResponse> AutenticarAsync(string usuario, string password, CancellationToken cancellationToken = default)

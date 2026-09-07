@@ -34,6 +34,10 @@ export const routes: Routes = [
       { 
         path: 'personal/areas', 
         loadComponent: () => import('./features/admin/pages/areas-cargos/areas-cargos.component').then(m => m.AreasCargosComponent) 
+      },
+      { 
+        path: 'turnos/catalogo', 
+        loadComponent: () => import('./features/admin/pages/catalogo-turnos/catalogo-turnos.component').then(m => m.CatalogoTurnosComponent) 
       }
     ]
   },

@@ -38,6 +38,7 @@ namespace SAsistencia.Infrastructure
             services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IOrganizacionRepository, OrganizacionRepository>();
+            services.AddScoped<ITurnoRepository, TurnoRepository>();
 
             return services;
         }
