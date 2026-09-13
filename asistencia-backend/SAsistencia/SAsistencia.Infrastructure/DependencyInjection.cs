@@ -41,6 +41,7 @@ namespace SAsistencia.Infrastructure
             services.AddScoped<IOrganizacionRepository, OrganizacionRepository>();
             services.AddScoped<ITurnoRepository, TurnoRepository>();
             services.AddScoped<IMarcacionRepository, MarcacionRepository>();
+            services.AddScoped<IJustificacionRepository, JustificacionRepository>();
 
             return services;
         }

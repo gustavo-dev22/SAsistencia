@@ -1,0 +1,199 @@
+<p-toast position="bottom-right"></p-toast>
+
+<div class="space-y-6">
+
+  <!-- Encabezado con Indicador de Estado SignalR -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Registro en Vivo</h1>
+        
+        <!-- Badge de Conexión WebSocket -->
+        @if (monitorService.conectado()) {
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm">
+            <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            En Línea (WebSockets)
+          </span>
+        } @else {
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-sm">
+            <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+            Reconectando...
+          </span>
+        }
+      </div>
+      <p class="text-slate-400 text-xs mt-1">Monitoreo y telemetría de marcaciones institucionales en tiempo real</p>
+    </div>
+
+    <!-- Fecha actual -->
+    <div class="text-xs font-mono text-slate-400 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
+      <i class="pi pi-calendar mr-1.5 text-indigo-400"></i>
+      Jornada de Hoy
+    </div>
+  </div>
+
+  <!-- KPI Cards del Día (Actualizados reactivamente sin F5) -->
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+    
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+      <div>
+        <span class="text-xs font-medium text-slate-400">Total Marcaciones Hoy</span>
+        <div class="text-2xl font-extrabold text-white mt-1">{{ totalMarcas() }}</div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+        <i class="pi pi-bolt text-lg"></i>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+      <div>
+        <span class="text-xs font-medium text-slate-400">Puntuales / Tolerancia</span>
+        <div class="text-2xl font-extrabold text-emerald-400 mt-1">{{ totalPuntuales() }}</div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+        <i class="pi pi-check-circle text-lg"></i>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+      <div>
+        <span class="text-xs font-medium text-slate-400">Tardanzas Detectadas</span>
+        <div class="text-2xl font-extrabold text-amber-400 mt-1">{{ totalTardanzas() }}</div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+        <i class="pi pi-clock text-lg"></i>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+      <div>
+        <span class="text-xs font-medium text-slate-400">Cargos Exonerados</span>
+        <div class="text-2xl font-extrabold text-sky-400 mt-1">{{ totalExonerados() }}</div>
+      </div>
+      <div class="h-11 w-11 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+        <i class="pi pi-shield text-lg"></i>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Contenedor Principal: Grilla en Tiempo Real -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden space-y-3">
+    
+    <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+      <div class="flex items-center gap-2">
+        <div class="h-2 w-2 rounded-full bg-indigo-500 animate-ping"></div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-200">Flujo de Entrada y Salida Activo</span>
+      </div>
+      <span class="text-[11px] text-slate-500 font-mono">Últimas 100 transacciones</span>
+    </div>
+
+    <p-table 
+      [value]="marcaciones()" 
+      dataKey="id" 
+      [rows]="15"
+      [paginator]="true"
+      [loading]="cargando()"
+      styleClass="p-datatable-sm"
+      responsiveLayout="scroll"
+    >
+      <ng-template #header>
+        <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+          <th class="py-3 px-4 text-left">Hora</th>
+          <th class="py-3 px-4 text-left">Colaborador</th>
+          <th class="py-3 px-4 text-left">Área / Dependencia</th>
+          <th class="py-3 px-4 text-center">Tipo</th>
+          <th class="py-3 px-4 text-center">Puntualidad</th>
+          <th class="py-3 px-4 text-center">Método</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-m>
+        <tr 
+          class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-all duration-500"
+          [class.bg-indigo-950/50]="idReciente() === m.id"
+        >
+          <!-- Hora con resaltado -->
+          <td class="py-3 px-4">
+            <span class="font-mono font-bold text-white bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+              {{ m.hora }}
+            </span>
+          </td>
+
+          <!-- Colaborador -->
+          <td class="py-3 px-4">
+            <div class="font-semibold text-slate-200">{{ m.nombreCompleto }}</div>
+            <div class="text-[11px] text-slate-400">DNI: {{ m.dni || 'S/D' }} &bull; {{ m.cargoNombre || 'Colaborador' }}</div>
+          </td>
+
+          <!-- Área -->
+          <td class="py-3 px-4 text-slate-300">
+            <span class="font-semibold text-indigo-400 mr-1">[{{ m.oficinaSigla || 'SASI' }}]</span>
+            {{ m.oficinaNombre || 'Sede Central' }}
+          </td>
+
+          <!-- Tipo Marca (Entrada / Salida) -->
+          <td class="py-3 px-4 text-center">
+            @if (m.tipoMarcacion === 'ENTRADA') {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <i class="pi pi-sign-in mr-1"></i> ENTRADA
+              </span>
+            } @else {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <i class="pi pi-sign-out mr-1"></i> SALIDA
+              </span>
+            }
+          </td>
+
+          <!-- Estado de Puntualidad -->
+          <td class="py-3 px-4 text-center">
+            @if (m.estadoPuntualidad === 'PUNTUAL') {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Puntual
+              </span>
+            } @else if (m.estadoPuntualidad === 'TOLERANCIA') {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                Tolerancia
+              </span>
+            } @else if (m.estadoPuntualidad === 'TARDANZA') {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                +{{ m.minutosTardanza }} min Tardanza
+              </span>
+            } @else if (m.estadoPuntualidad === 'EXONERADO') {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                Exonerado
+              </span>
+            } @else {
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                Fuera de Turno
+              </span>
+            }
+          </td>
+
+          <!-- Método (QR / DNI) -->
+          <td class="py-3 px-4 text-center text-slate-400 font-mono text-[11px]">
+            @if (m.metodoRegistro === 'QR') {
+              <span class="inline-flex items-center gap-1 text-indigo-400">
+                <i class="pi pi-qrcode"></i> QR
+              </span>
+            } @else {
+              <span class="inline-flex items-center gap-1 text-slate-400">
+                <i class="pi pi-id-card"></i> DNI
+              </span>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="6" class="text-center py-12 text-slate-400 text-xs">
+            <i class="pi pi-inbox text-3xl text-slate-600 block mb-2"></i>
+            No se han registrado asistencias el día de hoy. Las nuevas marcas aparecerán aquí en vivo.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+  </div>
+
+</div>

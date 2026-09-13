@@ -1,4 +1,7 @@
+using SAsistencia.Api.Hubs;
+using SAsistencia.Api.Services;
 using SAsistencia.Application;
+using SAsistencia.Application.Common.Interfaces;
 using SAsistencia.Infrastructure;
 using Scalar.AspNetCore;
 
@@ -8,6 +11,10 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddScoped<IMarcacionNotifier, MarcacionNotifier>();
+
+builder.Services.AddSignalR();
 
 // Add services to the container.
 
@@ -43,5 +50,6 @@ app.UseHttpsRedirection();
 app.UseCors(corsPolicy);
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<MarcacionesHub>("/hubs/marcaciones");
 
 app.Run();

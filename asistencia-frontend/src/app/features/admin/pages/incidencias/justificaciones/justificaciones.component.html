@@ -1,0 +1,366 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="space-y-6">
+
+  <!-- Encabezado y Acción -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Bandeja de Justificaciones</h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          {{ totalRegistros() }} Solicitudes
+        </span>
+      </div>
+      <p class="text-slate-400 text-xs mt-1">Auditoría, validación de sustentos médicos y resolución de dispensas</p>
+    </div>
+
+    <!-- Indicador de perfil auditor -->
+    <div class="flex items-center gap-2">
+      <span class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-300 flex items-center gap-2">
+        <i class="pi pi-shield text-indigo-400"></i>
+        <span>Panel Dictaminador (RRHH)</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Panel de Filtros -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+      
+      <!-- Búsqueda -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Colaborador / DNI</label>
+        <input 
+          type="text" 
+          placeholder="Nombre o DNI..."
+          [ngModel]="filtroTexto()"
+          (ngModelChange)="filtroTexto.set($event)"
+          (keyup.enter)="consultar(1)"
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+        />
+      </div>
+
+      <!-- Estado -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Estado de Solicitud</label>
+        <select 
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+          [ngModel]="filtroEstado()"
+          (ngModelChange)="filtroEstado.set($event); consultar(1)"
+        >
+          <option value="TODOS">Todos los estados</option>
+          <option value="PENDIENTE">Pendientes</option>
+          <option value="APROBADA">Aprobadas</option>
+          <option value="RECHAZADA">Rechazadas</option>
+        </select>
+      </div>
+
+      <!-- Tipo -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Tipo de Dispensa</label>
+        <select 
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+          [ngModel]="filtroTipo()"
+          (ngModelChange)="filtroTipo.set($event); consultar(1)"
+        >
+          <option [ngValue]="null">Todos los tipos</option>
+          @for (t of tipos(); track t.id) {
+            <option [ngValue]="t.id">{{ t.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Área y Limpiar -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Área / Oficina</label>
+        <div class="flex items-center gap-1.5">
+          <select 
+            class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+            [ngModel]="filtroOficina()"
+            (ngModelChange)="filtroOficina.set($event); consultar(1)"
+          >
+            <option [ngValue]="null">Todas las áreas</option>
+            @for (o of oficinas(); track o.id) {
+              <option [ngValue]="o.id">[{{ o.sigla }}] {{ o.nombre }}</option>
+            }
+          </select>
+          <button 
+            type="button" 
+            (click)="limpiarFiltros()"
+            title="Limpiar filtros"
+            class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+          >
+            <i class="pi pi-filter-slash text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tabla Paginada en Servidor -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden">
+    <p-table 
+      [value]="justificaciones()" 
+      dataKey="id" 
+      [lazy]="true"
+      (onLazyLoad)="onLazyLoad($event)"
+      [paginator]="true" 
+      [rows]="filas" 
+      [totalRecords]="totalRegistros()"
+      [loading]="cargando()"
+      [rowsPerPageOptions]="[15, 30, 50]"
+      [tableStyle]="{'min-width': '100%'}"
+      styleClass="p-datatable-sm w-full"
+      responsiveLayout="scroll"
+    >
+      <ng-template #header>
+        <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+          <th class="py-3 px-4 text-left">Colaborador</th>
+          <th class="py-3 px-4 text-left">Tipo Dispensa</th>
+          <th class="py-3 px-4 text-center">Periodo</th>
+          <th class="py-3 px-4 text-left">Motivo / Sustento</th>
+          <th class="py-3 px-4 text-center">Documento</th>
+          <th class="py-3 px-4 text-center">Estado</th>
+          <th class="py-3 px-4 text-center">Acciones</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-j>
+        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+          
+          <!-- Colaborador -->
+          <td class="py-3 px-4">
+            <div class="font-semibold text-slate-200">{{ j.nombreCompleto }}</div>
+            <div class="text-[11px] text-slate-400">DNI: {{ j.dni || 'S/D' }} &bull; [{{ j.oficinaSigla || 'SASI' }}]</div>
+          </td>
+
+          <!-- Tipo -->
+          <td class="py-3 px-4">
+            <div class="font-semibold text-indigo-400">{{ j.tipoJustificacionNombre }}</div>
+            <div class="text-[10px] text-slate-400">
+              {{ j.conGoceHaber ? 'Con goce de haber' : 'Sin goce de haber' }}
+            </div>
+          </td>
+
+          <!-- Periodo -->
+          <td class="py-3 px-4 text-center font-mono">
+            <span class="text-slate-200 font-semibold">{{ j.fechaInicio }}</span>
+            @if (j.fechaInicio !== j.fechaFin) {
+              <span class="text-slate-500 block text-[10px]">al {{ j.fechaFin }}</span>
+            }
+          </td>
+
+          <!-- Motivo -->
+          <td class="py-3 px-4 text-slate-300 max-w-xs truncate" [title]="j.motivo">
+            {{ j.motivo }}
+          </td>
+
+          <!-- Archivo adjunto -->
+          <td class="py-3 px-4 text-center">
+            @if (j.rutaArchivo) {
+              <button 
+                type="button" 
+                (click)="descargarSustento(j.id)"
+                pTooltip="Ver Sustento Digital"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 text-[11px] cursor-pointer"
+              >
+                <i class="pi pi-paperclip text-xs"></i>
+                <span>Adjunto</span>
+              </button>
+            } @else {
+              <span class="text-slate-500 italic text-[11px]">Sin adjunto</span>
+            }
+          </td>
+
+          <!-- Estado -->
+          <td class="py-3 px-4 text-center">
+            @if (j.estado === 'APROBADA') {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                APROBADA
+              </span>
+            } @else if (j.estado === 'PENDIENTE') {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                PENDIENTE
+              </span>
+            } @else {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                RECHAZADA
+              </span>
+            }
+          </td>
+
+          <!-- Acciones -->
+          <td class="py-3 px-4 text-center">
+            @if (j.estado === 'PENDIENTE') {
+              <button 
+                type="button" 
+                (click)="abrirResolver(j)"
+                pTooltip="Evaluar y Resolver"
+                class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-[11px] cursor-pointer transition-colors shadow-sm"
+              >
+                Evaluar
+              </button>
+            } @else {
+              <span class="text-slate-500 text-[11px]">&bull; Resuelto &bull;</span>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="7" class="!text-center !p-0 border-0">
+            <div class="w-full min-h-[280px] flex flex-col items-center justify-center py-10 px-4 text-center">
+              <div class="h-14 w-14 rounded-2xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-center text-indigo-400 mb-3 shadow-xl">
+                <i class="pi pi-file-edit text-2xl"></i>
+              </div>
+              <h3 class="text-sm font-bold text-slate-100 tracking-tight mb-1">
+                Sin justificaciones registradas
+              </h3>
+              <p class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                No se encontraron dispensas o solicitudes con los criterios seleccionados.
+              </p>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- MODAL: Radicar Nueva Justificación -->
+  <p-dialog 
+    [(visible)]="dialogNueva" 
+    [modal]="true" 
+    header="Radicar Justificación de Asistencia"
+    [style]="{ width: '480px' }"
+  >
+    <div class="space-y-3.5 pt-2 text-xs">
+      
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Colaborador *</label>
+        <select 
+          class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500 cursor-pointer"
+          [(ngModel)]="formRegistro.empleadoId"
+        >
+          <option [ngValue]="null">-- Seleccione Colaborador --</option>
+          @for (emp of empleados(); track emp.id) {
+            <option [ngValue]="emp.id">
+              {{ emp.nombreCompleto }} (DNI: {{ emp.dni || 'S/D' }})
+            </option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Tipo de Dispensa *</label>
+        <select 
+          class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500 cursor-pointer"
+          [(ngModel)]="formRegistro.tipoJustificacionId"
+        >
+          @for (t of tipos(); track t.id) {
+            <option [ngValue]="t.id">{{ t.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Fechas -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Fecha Desde *</label>
+          <input 
+            type="date" 
+            [(ngModel)]="formRegistro.fechaInicio"
+            class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500 cursor-pointer"
+          />
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Fecha Hasta *</label>
+          <input 
+            type="date" 
+            [(ngModel)]="formRegistro.fechaFin"
+            class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500 cursor-pointer"
+          />
+        </div>
+      </div>
+
+      <!-- Motivo -->
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Motivo / Fundamentación *</label>
+        <textarea 
+          rows="3" 
+          [(ngModel)]="formRegistro.motivo"
+          placeholder="Describa brevemente la causal de la dispensa..."
+          class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500"
+        ></textarea>
+      </div>
+
+      <!-- Archivo adjunto -->
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Sustento Digital (PDF / Imagen)</label>
+        <input 
+          type="file" 
+          accept=".pdf,.png,.jpg,.jpeg"
+          (change)="onArchivoSeleccionado($event)"
+          class="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+        />
+      </div>
+
+    </div>
+
+    <div class="flex justify-end gap-2 mt-6">
+      <button type="button" (click)="dialogNueva.set(false)" class="px-3 py-2 text-slate-400 hover:text-white text-xs cursor-pointer">Cancelar</button>
+      <button type="button" (click)="guardarJustificacion()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer">Radicar Solicitud</button>
+    </div>
+  </p-dialog>
+
+  <!-- MODAL: Resolver Justificación -->
+  <p-dialog 
+    [(visible)]="dialogResolver" 
+    [modal]="true" 
+    header="Evaluar y Resolver Solicitud"
+    [style]="{ width: '440px' }"
+  >
+    @if (itemParaResolver()) {
+      <div class="space-y-3.5 pt-2 text-xs">
+        <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
+          <div class="font-bold text-slate-100 text-sm">{{ itemParaResolver()!.nombreCompleto }}</div>
+          <div class="text-indigo-400 font-semibold">{{ itemParaResolver()!.tipoJustificacionNombre }}</div>
+          <div class="text-slate-400">Periodo: {{ itemParaResolver()!.fechaInicio }} al {{ itemParaResolver()!.fechaFin }}</div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Observaciones / Motivo de Decisión</label>
+          <textarea 
+            rows="2" 
+            [(ngModel)]="observacionesResolucion"
+            placeholder="Opcional: motivos de aprobación o rechazo..."
+            class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500"
+          ></textarea>
+        </div>
+      </div>
+    }
+
+    <div class="flex justify-between items-center gap-2 mt-6">
+      <button type="button" (click)="dialogResolver.set(false)" class="px-3 py-2 text-slate-400 hover:text-white text-xs cursor-pointer">Cerrar</button>
+      
+      <div class="flex gap-2">
+        <button 
+          type="button" 
+          (click)="ejecutarResolucion('RECHAZADA')" 
+          class="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold cursor-pointer"
+        >
+          Rechazar
+        </button>
+        <button 
+          type="button" 
+          (click)="ejecutarResolucion('APROBADA')" 
+          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer"
+        >
+          Aprobar Dispensa
+        </button>
+      </div>
+    </div>
+  </p-dialog>
+
+</div>

@@ -46,6 +46,18 @@ export const routes: Routes = [
       { 
         path: 'turnos/asignacion', 
         loadComponent: () => import('./features/admin/pages/asignacion-turnos/asignacion-turnos.component').then(m => m.AsignacionTurnosComponent) 
+      },
+      { 
+        path: 'marcaciones/en-vivo', 
+        loadComponent: () => import('./features/admin/pages/marcaciones/registro-en-vivo/registro-en-vivo.component').then(m => m.RegistroEnVivoComponent) 
+      },
+      { 
+        path: 'marcaciones/historial', 
+        loadComponent: () => import('./features/admin/pages/marcaciones/historial-marcas/historial-marcas.component').then(m => m.HistorialMarcasComponent) 
+      },
+      { 
+        path: 'incidencias/justificaciones', 
+        loadComponent: () => import('./features/admin/pages/incidencias/justificaciones/justificaciones.component').then(m => m.JustificacionesComponent) 
       }
     ]
   },

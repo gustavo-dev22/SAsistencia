@@ -1,0 +1,278 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="space-y-6">
+
+  <!-- Cabecera y Acciones de Exportación -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Historial de Marcaciones</h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          {{ totalRegistros() }} Registros encontrados
+        </span>
+      </div>
+      <p class="text-slate-400 text-xs mt-1">Auditoría consolidada y control de accesos institucionales</p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button 
+        type="button"
+        (click)="exportarCsv()" 
+        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-medium text-xs border border-slate-700 transition-all cursor-pointer"
+      >
+        <i class="pi pi-file-excel text-emerald-400"></i>
+        <span>Descargar CSV</span>
+      </button>
+
+      <button 
+        type="button"
+        (click)="consultar(1)" 
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+      >
+        <i class="pi pi-search"></i>
+        <span>Filtrar</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel Avanzado de Filtros Forenses -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      
+      <!-- Fecha Desde -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Desde</label>
+        <input 
+          type="date" 
+          [ngModel]="fechaInicio()"
+          (ngModelChange)="fechaInicio.set($event)"
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+        />
+      </div>
+
+      <!-- Fecha Hasta -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Hasta</label>
+        <input 
+          type="date" 
+          [ngModel]="fechaFin()"
+          (ngModelChange)="fechaFin.set($event)"
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+        />
+      </div>
+
+      <!-- Colaborador o DNI -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Colaborador / DNI</label>
+        <input 
+          type="text" 
+          placeholder="Nombre o DNI..."
+          [ngModel]="busqueda()"
+          (ngModelChange)="busqueda.set($event)"
+          (keyup.enter)="consultar(1)"
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+        />
+      </div>
+
+      <!-- Oficina / Área -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Área / Oficina</label>
+        <select 
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+          [ngModel]="oficinaSeleccionada()"
+          (ngModelChange)="oficinaSeleccionada.set($event)"
+        >
+          <option [ngValue]="null">Todas las áreas</option>
+          @for (o of oficinas(); track o.id) {
+            <option [ngValue]="o.id">[{{ o.sigla }}] {{ o.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Tipo Marcación -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Tipo</label>
+        <select 
+          class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+          [ngModel]="tipoSeleccionado()"
+          (ngModelChange)="tipoSeleccionado.set($event)"
+        >
+          <option value="">Entrada y Salida</option>
+          <option value="ENTRADA">Solo Entradas</option>
+          <option value="SALIDA">Solo Salidas</option>
+        </select>
+      </div>
+
+      <!-- Puntualidad -->
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Puntualidad</label>
+        <div class="flex items-center gap-1.5">
+          <select 
+            class="w-full p-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
+            [ngModel]="puntualidadSeleccionada()"
+            (ngModelChange)="puntualidadSeleccionada.set($event)"
+          >
+            <option value="">Todos los estados</option>
+            <option value="PUNTUAL">Puntual</option>
+            <option value="TOLERANCIA">Tolerancia</option>
+            <option value="TARDANZA">Tardanza</option>
+            <option value="FUERA_TURNO">Fuera de Turno</option>
+            <option value="EXONERADO">Exonerado</option>
+          </select>
+          <button 
+            type="button" 
+            (click)="limpiarFiltros()"
+            title="Limpiar filtros"
+            class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+          >
+            <i class="pi pi-filter-slash text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Grilla Histórica Paginada Server-Side -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden">
+    <p-table 
+      [value]="marcaciones()" 
+      dataKey="id" 
+      [lazy]="true"
+      (onLazyLoad)="onLazyLoad($event)"
+      [paginator]="true" 
+      [rows]="filasPorPagina" 
+      [totalRecords]="totalRegistros()"
+      [loading]="cargando()"
+      [rowsPerPageOptions]="[15, 30, 50]"
+      [tableStyle]="{'min-width': '100%'}"
+      styleClass="p-datatable-sm w-full"
+      responsiveLayout="scroll"
+    >
+      <ng-template #header>
+        <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+          <th class="py-3 px-4 text-left">Fecha y Hora</th>
+          <th class="py-3 px-4 text-left">Colaborador</th>
+          <th class="py-3 px-4 text-left">Área / Cargo</th>
+          <th class="py-3 px-4 text-center">Tipo</th>
+          <th class="py-3 px-4 text-center">Puntualidad</th>
+          <th class="py-3 px-4 text-center">Turno</th>
+          <th class="py-3 px-4 text-center">Método & Terminal</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-m>
+        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+          
+          <!-- Fecha y Hora -->
+          <td class="py-3 px-4">
+            <div class="font-semibold text-slate-200">{{ m.fecha }}</div>
+            <div class="font-mono text-[11px] text-indigo-400 font-bold">{{ m.hora }}</div>
+          </td>
+
+          <!-- Colaborador -->
+          <td class="py-3 px-4">
+            <div class="font-semibold text-slate-200">{{ m.nombreCompleto }}</div>
+            <div class="font-mono text-[11px] text-slate-400">DNI: {{ m.dni || 'S/D' }}</div>
+          </td>
+
+          <!-- Área / Cargo -->
+          <td class="py-3 px-4 text-slate-300">
+            <div>
+              <span class="font-semibold text-indigo-400 mr-1">[{{ m.oficinaSigla || 'SASI' }}]</span>
+              {{ m.oficinaNombre || 'Sede Central' }}
+            </div>
+            <div class="text-[11px] text-slate-400">{{ m.cargoNombre || 'Colaborador' }}</div>
+          </td>
+
+          <!-- Tipo -->
+          <td class="py-3 px-4 text-center">
+            @if (m.tipoMarcacion === 'ENTRADA') {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                ENTRADA
+              </span>
+            } @else {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                SALIDA
+              </span>
+            }
+          </td>
+
+          <!-- Puntualidad -->
+          <td class="py-3 px-4 text-center">
+            @if (m.estadoPuntualidad === 'PUNTUAL') {
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Puntual
+              </span>
+            } @else if (m.estadoPuntualidad === 'TOLERANCIA') {
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                Tolerancia
+              </span>
+            } @else if (m.estadoPuntualidad === 'TARDANZA') {
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                +{{ m.minutosTardanza }} min
+              </span>
+            } @else if (m.estadoPuntualidad === 'EXONERADO') {
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                Exonerado
+              </span>
+            } @else {
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                Fuera Turno
+              </span>
+            }
+          </td>
+
+          <!-- Turno -->
+          <td class="py-3 px-4 text-center text-slate-400 text-[11px]">
+            {{ m.turnoNombre }}
+          </td>
+
+          <!-- Método & IP -->
+          <td class="py-3 px-4 text-center font-mono text-[11px]">
+            <span class="text-slate-300 font-semibold">{{ m.metodoRegistro }}</span>
+            @if (m.ipTerminal) {
+              <span class="text-[10px] text-slate-500 block truncate max-w-[120px] mx-auto" [title]="m.ipTerminal">
+                {{ m.ipTerminal }}
+              </span>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="7" class="!text-center !p-0 border-0">
+            <div class="w-full min-h-[320px] flex flex-col items-center justify-center py-12 px-4 text-center">
+              
+              <!-- Contenedor del Icono con relieve y contraste nítido -->
+              <div class="h-16 w-16 rounded-2xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-center text-indigo-400 mb-4 shadow-xl">
+                <i class="pi pi-search text-2xl"></i>
+              </div>
+
+              <!-- Textos centrados -->
+              <h3 class="text-sm font-bold text-slate-100 tracking-tight mb-1">
+                No se encontraron marcaciones
+              </h3>
+              <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed mb-5">
+                No existen registros que coincidan con los filtros y fechas seleccionados. Intente ampliando el periodo o restableciendo los criterios.
+              </p>
+
+              <!-- Botón restablecer -->
+              <button 
+                type="button" 
+                (click)="limpiarFiltros()"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 shadow-md hover:border-slate-600 transition-all cursor-pointer"
+              >
+                <i class="pi pi-filter-slash text-xs text-indigo-400"></i>
+                <span>Restablecer Filtros</span>
+              </button>
+
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+</div>

@@ -14,15 +14,18 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
         private readonly IEmpleadoRepository _empleadoRepo;
         private readonly IMarcacionRepository _marcacionRepo;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMarcacionNotifier _notifier;
 
         public RegistrarMarcaCommandHandler(
             IEmpleadoRepository empleadoRepo,
             IMarcacionRepository marcacionRepo,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IMarcacionNotifier notifier)
         {
             _empleadoRepo = empleadoRepo;
             _marcacionRepo = marcacionRepo;
             _unitOfWork = unitOfWork;
+            _notifier = notifier;
         }
 
         public async Task<ResultadoMarcacionDto> Handle(RegistrarMarcaCommand request, CancellationToken cancellationToken)
@@ -132,6 +135,26 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
 
             await _marcacionRepo.AgregarAsync(nuevaMarca, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // DISPARO EN TIEMPO REAL: Notificar al Live Monitor
+            var dtoEnVivo = new MarcacionEnVivoDto
+            {
+                Id = nuevaMarca.Id,
+                EmpleadoId = empleado.Id,
+                NombreCompleto = empleado.NombreCompleto,
+                Dni = empleado.Dni,
+                OficinaNombre = empleado.Oficina?.Nombre,
+                OficinaSigla = empleado.Oficina?.Sigla,
+                CargoNombre = empleado.Cargo?.Nombre,
+                Hora = ahora.ToString("HH:mm:ss"),
+                TipoMarcacion = tipoMarcacion,
+                EstadoPuntualidad = estadoPuntualidad,
+                MinutosTardanza = minutosTardanza,
+                MetodoRegistro = request.Dto.Metodo.ToUpper(),
+                FechaHora = ahora
+            };
+
+            await _notifier.NotificarNuevaMarcacionAsync(dtoEnVivo, cancellationToken);
 
             return new ResultadoMarcacionDto
             {

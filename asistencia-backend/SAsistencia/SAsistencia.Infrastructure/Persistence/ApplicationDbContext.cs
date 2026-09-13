@@ -19,6 +19,8 @@ namespace SAsistencia.Infrastructure.Persistence
         public DbSet<Oficina> Oficinas => Set<Oficina>();
         public DbSet<Cargo> Cargos => Set<Cargo>();
         public DbSet<Marcacion> Marcaciones => Set<Marcacion>();
+        public DbSet<TipoJustificacion> TiposJustificacion => Set<TipoJustificacion>();
+        public DbSet<Justificacion> Justificaciones => Set<Justificacion>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
