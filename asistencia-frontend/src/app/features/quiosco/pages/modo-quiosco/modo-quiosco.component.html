@@ -1,0 +1,228 @@
+<div class="fixed inset-0 bg-slate-950 text-white select-none overflow-hidden flex flex-col justify-between p-6 sm:p-8 font-sans">
+
+  <!-- 1. BARRA SUPERIOR INSTITUCIONAL -->
+  <header class="flex items-center justify-between border-b border-slate-800/80 pb-4">
+    <div class="flex items-center gap-3">
+      <div class="h-11 w-11 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+        <i class="pi pi-qrcode text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white">SAsistencia - Terminal de Acceso</h1>
+        <p class="text-xs text-slate-400 capitalize">{{ fechaActual() }}</p>
+      </div>
+    </div>
+
+    <!-- Reloj Digital Central -->
+    <div class="hidden md:flex flex-col items-end">
+      <span class="font-mono text-3xl font-extrabold text-indigo-400 tracking-wider drop-shadow-sm">
+        {{ horaActual() }}
+      </span>
+      <span class="text-[10px] uppercase font-semibold tracking-widest text-emerald-400 flex items-center gap-1.5 mt-0.5">
+        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+        Terminal En Línea
+      </span>
+    </div>
+
+    <!-- Botón Salir al Panel -->
+    <button 
+      type="button" 
+      (click)="volverAlPanel()"
+      class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
+      title="Salir del Modo Quiosco"
+    >
+      <i class="pi pi-sign-out text-sm"></i>
+    </button>
+  </header>
+
+  <!-- 2. CUERPO PRINCIPAL -->
+  <main class="flex-1 flex flex-col items-center justify-center max-w-4xl w-full mx-auto py-6">
+
+    <!-- Selector de Método: DNI o QR -->
+    <div class="flex p-1 bg-slate-900 border border-slate-800 rounded-2xl mb-6">
+      <button 
+        type="button" 
+        (click)="modoActivo.set('DNI')"
+        [class]="modoActivo() === 'DNI' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'"
+        class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+      >
+        <i class="pi pi-id-card"></i>
+        <span>Marcación por DNI</span>
+      </button>
+
+      <button 
+        type="button" 
+        (click)="modoActivo.set('QR')"
+        [class]="modoActivo() === 'QR' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'"
+        class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+      >
+        <i class="pi pi-camera"></i>
+        <span>Lector de Carnet QR</span>
+      </button>
+    </div>
+
+    <!-- Pestaña 1: Teclado Numérico para DNI -->
+    @if (modoActivo() === 'DNI') {
+      <div class="w-full max-w-sm flex flex-col items-center">
+        
+        <!-- Pantalla de Display del DNI -->
+        <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3.5 mb-5 flex items-center justify-between shadow-inner">
+          <span class="text-xs text-slate-500 font-mono">DNI:</span>
+          <span class="font-mono text-2xl font-bold tracking-widest text-indigo-300">
+            {{ dniInput() || '________' }}
+          </span>
+          <button 
+            type="button" 
+            (click)="borrarTecla()"
+            class="text-slate-500 hover:text-rose-400 p-2 cursor-pointer transition-colors"
+          >
+            <i class="pi pi-backspace text-base"></i>
+          </button>
+        </div>
+
+        <!-- Teclado Táctil -->
+        <div class="grid grid-cols-3 gap-3 w-full">
+          @for (num of ['1','2','3','4','5','6','7','8','9']; track num) {
+            <button 
+              type="button" 
+              (click)="presionarTecla(num)"
+              class="h-16 rounded-2xl bg-slate-900 border border-slate-800/80 hover:bg-slate-800 active:scale-95 text-2xl font-bold text-slate-100 transition-all cursor-pointer shadow-md flex items-center justify-center"
+            >
+              {{ num }}
+            </button>
+          }
+          
+          <button 
+            type="button" 
+            (click)="limpiarDni()"
+            class="h-16 rounded-2xl bg-slate-900/60 border border-slate-800 text-rose-400 hover:bg-slate-800 active:scale-95 text-xs font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
+          >
+            Limpiar
+          </button>
+
+          <button 
+            type="button" 
+            (click)="presionarTecla('0')"
+            class="h-16 rounded-2xl bg-slate-900 border border-slate-800/80 hover:bg-slate-800 active:scale-95 text-2xl font-bold text-slate-100 transition-all cursor-pointer shadow-md flex items-center justify-center"
+          >
+            0
+          </button>
+
+          <button 
+            type="button" 
+            (click)="marcarPorDni()"
+            [disabled]="dniInput().length < 8"
+            class="h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white font-bold text-sm uppercase transition-all cursor-pointer shadow-lg shadow-emerald-600/30 flex items-center justify-center"
+          >
+            <i class="pi pi-check text-xl"></i>
+          </button>
+        </div>
+
+      </div>
+    }
+
+    <!-- Pestaña 2: Lector Óptico QR con Cámara -->
+    @if (modoActivo() === 'QR') {
+      <div class="flex flex-col items-center justify-center w-full max-w-sm">
+        <div class="relative w-72 h-72 rounded-3xl overflow-hidden border-2 border-indigo-500/40 bg-slate-900 shadow-2xl flex items-center justify-center">
+          
+          <!-- Escáner continuo sin destruirse en el DOM -->
+          <zxing-scanner 
+            [formats]="formatosPermitidos"
+            [tryHarder]="true"
+            (scanSuccess)="alEscanearQr($event)"
+            (scanError)="onScanError($event)"
+            (permissionResponse)="onHasPermission($event)"
+            class="w-full h-full object-cover"
+          ></zxing-scanner>
+
+          <!-- Mensaje si no otorgó permisos de cámara -->
+          @if (!tienePermisoCamara()) {
+            <div class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center">
+              <i class="pi pi-camera text-2xl text-rose-400 mb-2"></i>
+              <p class="text-xs text-rose-300 font-semibold">Cámara no autorizada</p>
+              <p class="text-[11px] text-slate-400 mt-1">Habilite los permisos de cámara en su navegador.</p>
+            </div>
+          }
+
+          <!-- Mira Láser de Escaneo -->
+          <div class="absolute inset-0 border-2 border-indigo-400/20 rounded-3xl pointer-events-none flex items-center justify-center">
+            <div class="w-48 h-48 border-2 border-dashed border-indigo-400/80 rounded-2xl animate-pulse"></div>
+          </div>
+
+        </div>
+
+        <p class="text-xs text-slate-400 mt-4 text-center font-medium">
+          Acerque el código QR de su credencial frente a la cámara
+        </p>
+      </div>
+    }
+
+  </main>
+
+  <!-- 3. FOOTER -->
+  <footer class="text-center text-slate-500 text-[11px] border-t border-slate-800/80 pt-3">
+    Ministerio de Justicia y Derechos Humanos &bull; Sistema de Control de Asistencia SAsistencia
+  </footer>
+
+  <!-- 4. MODAL / OVERLAY DE RESULTADO INSTANTÁNEO (3.5 Segundos) -->
+  @if (mostrarResultado() && resultado()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
+      
+      <div 
+        class="w-full max-w-md p-8 rounded-3xl border text-center shadow-2xl transition-all"
+        [class.bg-emerald-950]="resultado()!.exito && resultado()!.estadoPuntualidad !== 'TARDANZA'"
+        [class.border-emerald-500]="resultado()!.exito && resultado()!.estadoPuntualidad !== 'TARDANZA'"
+        [class.bg-amber-950]="resultado()!.exito && resultado()!.estadoPuntualidad === 'TARDANZA'"
+        [class.border-amber-500]="resultado()!.exito && resultado()!.estadoPuntualidad === 'TARDANZA'"
+        [class.bg-rose-950]="!resultado()!.exito"
+        [class.border-rose-500]="!resultado()!.exito"
+      >
+        <!-- Icono de Estado -->
+        <div class="h-20 w-20 rounded-full mx-auto flex items-center justify-center mb-4 shadow-xl"
+             [class.bg-emerald-500]="resultado()!.exito && resultado()!.estadoPuntualidad !== 'TARDANZA'"
+             [class.bg-amber-500]="resultado()!.exito && resultado()!.estadoPuntualidad === 'TARDANZA'"
+             [class.bg-rose-500]="!resultado()!.exito"
+        >
+          <i class="pi text-3xl text-white"
+             [class.pi-check]="resultado()!.exito && resultado()!.estadoPuntualidad !== 'TARDANZA'"
+             [class.pi-clock]="resultado()!.exito && resultado()!.estadoPuntualidad === 'TARDANZA'"
+             [class.pi-times]="!resultado()!.exito"
+          ></i>
+        </div>
+
+        @if (resultado()!.exito) {
+          <span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/20 text-white inline-block mb-2">
+            {{ resultado()!.tipoMarcacion }} &bull; {{ resultado()!.estadoPuntualidad }}
+          </span>
+
+          <h2 class="text-xl font-extrabold text-white tracking-tight mb-1">
+            {{ resultado()!.nombreEmpleado }}
+          </h2>
+          
+          <p class="text-xs text-slate-200 font-medium mb-1">
+            {{ resultado()!.areaEmpleado }}
+          </p>
+
+          <div class="font-mono text-3xl font-extrabold text-white mt-3">
+            {{ resultado()!.hora }}
+          </div>
+
+          @if (resultado()!.minutosTardanza > 0) {
+            <p class="text-xs text-amber-300 font-semibold mt-2">
+              Tardanza computada: +{{ resultado()!.minutosTardanza }} minutos
+            </p>
+          }
+        } @else {
+          <h2 class="text-lg font-bold text-white mb-2">Acceso Denegado</h2>
+          <p class="text-xs text-rose-200">{{ resultado()!.mensaje }}</p>
+        }
+
+        <div class="w-28 h-1 bg-white/30 rounded-full mx-auto mt-6 overflow-hidden">
+          <div class="w-full h-full bg-white animate-pulse"></div>
+        </div>
+      </div>
+
+    </div>
+  }
+
+</div>

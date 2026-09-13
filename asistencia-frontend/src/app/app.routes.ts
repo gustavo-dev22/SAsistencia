@@ -15,6 +15,10 @@ export const routes: Routes = [
     path: 'login', 
     loadComponent: () => import('./features/auth/pages/login/login.component').then(m => m.LoginComponent) 
   },
+  {
+    path: 'quiosco',
+    loadComponent: () => import('./features/quiosco/pages/modo-quiosco/modo-quiosco.component').then(m => m.ModoQuioscoComponent)
+  },
 
   // Layout Administrativo Compartido
   {
@@ -38,6 +42,10 @@ export const routes: Routes = [
       { 
         path: 'turnos/catalogo', 
         loadComponent: () => import('./features/admin/pages/catalogo-turnos/catalogo-turnos.component').then(m => m.CatalogoTurnosComponent) 
+      },
+      { 
+        path: 'turnos/asignacion', 
+        loadComponent: () => import('./features/admin/pages/asignacion-turnos/asignacion-turnos.component').then(m => m.AsignacionTurnosComponent) 
       }
     ]
   },

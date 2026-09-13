@@ -18,6 +18,7 @@ namespace SAsistencia.Infrastructure.Persistence
         public DbSet<Turno> Turnos => Set<Turno>();
         public DbSet<Oficina> Oficinas => Set<Oficina>();
         public DbSet<Cargo> Cargos => Set<Cargo>();
+        public DbSet<Marcacion> Marcaciones => Set<Marcacion>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

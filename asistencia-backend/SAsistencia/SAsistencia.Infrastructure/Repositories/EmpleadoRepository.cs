@@ -52,5 +52,41 @@ namespace SAsistencia.Infrastructure.Repositories
             _context.Empleados.Update(empleado);
             return Task.CompletedTask;
         }
+
+        public async Task AsignarTurnoMasivoAsync(IEnumerable<int> empleadoIds, int? turnoId, CancellationToken cancellationToken = default)
+        {
+            var ids = empleadoIds.ToList();
+            var empleados = await _context.Empleados
+                .Where(e => ids.Contains(e.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var emp in empleados)
+            {
+                emp.TurnoId = turnoId;
+            }
+        }
+
+        public async Task AsignarTurnoPorOficinaAsync(int oficinaId, int? turnoId, CancellationToken cancellationToken = default)
+        {
+            var empleados = await _context.Empleados
+                .Where(e => e.OficinaId == oficinaId)
+                .ToListAsync(cancellationToken);
+
+            foreach (var emp in empleados)
+            {
+                emp.TurnoId = turnoId;
+            }
+        }
+
+        public async Task<Empleado?> ObtenerPorIdentificadorConRelacionesAsync(string identificador, CancellationToken cancellationToken = default)
+        {
+            var idLimpio = identificador.Trim();
+            return await _context.Empleados
+                .Include(e => e.Turno)
+                .Include(e => e.Oficina)
+                .Include(e => e.Cargo)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Dni == idLimpio || e.CodigoQr == idLimpio, cancellationToken);
+        }
     }
 }

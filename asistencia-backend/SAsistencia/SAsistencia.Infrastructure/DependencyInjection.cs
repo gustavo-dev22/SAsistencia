@@ -1,13 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SAsistencia.Application.Common.Interfaces;
 using SAsistencia.Infrastructure.Persistence;
+using SAsistencia.Infrastructure.Persistence.Repositories;
 using SAsistencia.Infrastructure.Repositories;
 using SAsistencia.Infrastructure.Services;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace SAsistencia.Infrastructure
 {
@@ -39,6 +40,7 @@ namespace SAsistencia.Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IOrganizacionRepository, OrganizacionRepository>();
             services.AddScoped<ITurnoRepository, TurnoRepository>();
+            services.AddScoped<IMarcacionRepository, MarcacionRepository>();
 
             return services;
         }
