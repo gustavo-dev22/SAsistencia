@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace SAsistencia.Application.Common.Interfaces
+namespace SAsistencia.Application.Common.Services
 {
     public interface ISasiAuthService
     {

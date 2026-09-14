@@ -15,6 +15,7 @@ namespace SAsistencia.Domain.Entities
         public int MinutosTardanza { get; set; } = 0;
         public string MetodoRegistro { get; set; } = "DNI"; // QR, DNI
         public string? IpTerminal { get; set; }
+        public bool EsManual { get; set; } = false;
 
         public Empleado? Empleado { get; set; }
         public Turno? Turno { get; set; }

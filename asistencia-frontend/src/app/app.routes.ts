@@ -58,6 +58,18 @@ export const routes: Routes = [
       { 
         path: 'incidencias/justificaciones', 
         loadComponent: () => import('./features/admin/pages/incidencias/justificaciones/justificaciones.component').then(m => m.JustificacionesComponent) 
+      },
+      { 
+        path: 'configuracion/parametros', 
+        loadComponent: () => import('./features/admin/pages/configuracion/parametros-globales/parametros-globales.component').then(m => m.ParametrosGlobalesComponent) 
+      },
+      { 
+        path: 'configuracion/auditoria', 
+        loadComponent: () => import('./features/admin/pages/configuracion/auditoria-marcas/auditoria-marcas.component').then(m => m.AuditoriaMarcasComponent) 
+      },
+      { 
+        path: 'configuracion/calendario-laboral', 
+        loadComponent: () => import('./features/admin/pages/configuracion/calendario-laboral/calendario-laboral.component').then(m => m.CalendarioLaboralComponent) 
       }
     ]
   },

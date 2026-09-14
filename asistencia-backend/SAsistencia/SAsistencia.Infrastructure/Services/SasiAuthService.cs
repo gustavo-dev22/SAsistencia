@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using SAsistencia.Application.Common.Interfaces;
+using SAsistencia.Application.Common.Services;
 using SAsistencia.Application.Features.Auth.DTOs;
 using SAsistencia.Application.Features.Empleados.DTOs;
 using SAsistencia.Application.Features.Organizacion.DTOs;

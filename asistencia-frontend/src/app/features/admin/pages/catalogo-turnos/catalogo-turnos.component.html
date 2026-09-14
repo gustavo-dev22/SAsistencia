@@ -50,7 +50,7 @@
         />
         @if (filtroTexto()) {
           <button 
-            type="button"
+            type="button" 
             (click)="limpiarBusqueda()"
             class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
           >
@@ -73,6 +73,7 @@
       <ng-template #header>
         <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
           <th class="py-3 px-4 text-left">Turno / Horario</th>
+          <th class="py-3 px-4 text-center">Días de Jornada</th>
           <th class="py-3 px-4 text-center">Entrada</th>
           <th class="py-3 px-4 text-center">Salida</th>
           <th class="py-3 px-4 text-center">Tolerancia</th>
@@ -85,36 +86,52 @@
 
       <ng-template #body let-t>
         <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+          
+          <!-- Turno -->
           <td class="py-3 px-4">
             <div class="font-semibold text-slate-200">{{ t.nombre }}</div>
             <div class="text-[11px] text-slate-400">{{ t.descripcion || 'Sin descripción adicional' }}</div>
           </td>
+
+          <!-- Días de Jornada -->
+          <td class="py-3 px-4 text-center">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-indigo-300 border border-slate-700/80">
+              <i class="pi pi-calendar text-[10px]"></i>
+              {{ obtenerTextoDias(t.diasSemana) }}
+            </span>
+          </td>
           
+          <!-- Entrada -->
           <td class="py-3 px-4 text-center">
             <span class="font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
               {{ t.horaEntrada }}
             </span>
           </td>
 
+          <!-- Salida -->
           <td class="py-3 px-4 text-center">
             <span class="font-mono text-indigo-400 font-semibold px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
               {{ t.horaSalida }}
             </span>
           </td>
 
+          <!-- Tolerancia -->
           <td class="py-3 px-4 text-center text-slate-300">
             <span class="font-mono">{{ t.toleranciaEntradaMinutos }} min</span>
             <span class="text-[10px] text-slate-500 block">Límite: {{ t.limiteTardanzaMinutos }} min</span>
           </td>
 
+          <!-- Refrigerio -->
           <td class="py-3 px-4 text-center text-slate-300 font-mono">
             {{ t.minutosRefrigerio }} min
           </td>
 
+          <!-- Asignados -->
           <td class="py-3 px-4 text-center font-semibold text-slate-300">
             {{ t.totalEmpleadosAsignados }}
           </td>
 
+          <!-- Estado -->
           <td class="py-3 px-4 text-center">
             @if (t.activo) {
               <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Activo</span>
@@ -123,11 +140,12 @@
             }
           </td>
 
+          <!-- Acciones -->
           <td class="py-3 px-4 text-center">
             <button 
-              type="button"
-              (click)="abrirEditar(t)"
-              pTooltip="Editar Turno"
+              type="button" 
+              (click)="abrirEditar(t)" 
+              pTooltip="Editar Turno" 
               class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
             >
               <i class="pi pi-pencil text-sm"></i>
@@ -138,7 +156,7 @@
 
       <ng-template #emptymessage>
         <tr>
-          <td colspan="8" class="text-center py-8 text-slate-400 text-xs">
+          <td colspan="9" class="text-center py-8 text-slate-400 text-xs">
             No se encontraron plantillas de turnos que coincidan con la búsqueda.
           </td>
         </tr>
@@ -150,10 +168,11 @@
   <p-dialog 
     [(visible)]="dialogTurno" 
     [modal]="true" 
-    [header]="esNuevo() ? 'Crear Plantilla de Turno' : 'Editar Turno'"
-    [style]="{ width: '480px' }"
+    [header]="esNuevo() ? 'Crear Plantilla de Turno' : 'Editar Turno'" 
+    [style]="{ width: '500px' }"
   >
     <div class="space-y-4 pt-2 text-xs">
+      
       <div>
         <label class="block font-semibold text-slate-300 mb-1">Nombre del Turno *</label>
         <input 
@@ -172,6 +191,29 @@
           [(ngModel)]="turnoForm.descripcion" 
           placeholder="Ej. De Lunes a Viernes con 1h de refrigerio" 
         />
+      </div>
+
+      <!-- Selector de Días de la Semana -->
+      <div class="space-y-1.5">
+        <label class="block font-semibold text-slate-300">Días Laborables Asignados *</label>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          @for (d of diasDisponibles; track d.id) {
+            <button 
+              type="button" 
+              (click)="toggleDia(d.id)"
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer border"
+              [class.bg-indigo-600]="esDiaActivo(d.id)"
+              [class.border-indigo-500]="esDiaActivo(d.id)"
+              [class.text-white]="esDiaActivo(d.id)"
+              [class.bg-slate-900]="!esDiaActivo(d.id)"
+              [class.border-slate-700]="!esDiaActivo(d.id)"
+              [class.text-slate-400]="!esDiaActivo(d.id)"
+            >
+              {{ d.nombre }}
+            </button>
+          }
+        </div>
+        <span class="text-[10px] text-slate-500">Haga clic sobre cada día para incluirlo o excluirlo de la jornada.</span>
       </div>
 
       <!-- Horas de Entrada y Salida -->
@@ -200,8 +242,8 @@
           <label class="block font-semibold text-slate-300 mb-1">Tolerancia (min)</label>
           <input 
             type="number" 
-            min="0"
-            max="60"
+            min="0" 
+            max="60" 
             class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500" 
             [(ngModel)]="turnoForm.toleranciaEntradaMinutos" 
           />
@@ -210,8 +252,8 @@
           <label class="block font-semibold text-slate-300 mb-1">Lím. Tardanza (min)</label>
           <input 
             type="number" 
-            min="0"
-            max="120"
+            min="0" 
+            max="120" 
             class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500" 
             [(ngModel)]="turnoForm.limiteTardanzaMinutos" 
           />
@@ -220,8 +262,8 @@
           <label class="block font-semibold text-slate-300 mb-1">Refrigerio (min)</label>
           <input 
             type="number" 
-            min="0"
-            max="120"
+            min="0" 
+            max="120" 
             class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono outline-none focus:border-indigo-500" 
             [(ngModel)]="turnoForm.minutosRefrigerio" 
           />

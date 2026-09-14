@@ -1,0 +1,232 @@
+<p-toast position="top-right"></p-toast>
+
+<div class="space-y-6">
+
+  <!-- Encabezado y Selector Anual -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Calendario Laboral y Feriados</h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+          Año {{ anioSeleccionado() }}
+        </span>
+      </div>
+      <p class="text-slate-400 text-xs mt-1">Gestión de días no laborables, feriados nacionales y descansos compensables</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Selector de Años -->
+      <div class="flex bg-slate-900 border border-slate-800 rounded-xl p-1">
+        @for (a of aniosDisponibles; track a) {
+          <button 
+            type="button" 
+            (click)="cargarFeriados(a)"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+            [class.bg-indigo-600]="anioSeleccionado() === a"
+            [class.text-white]="anioSeleccionado() === a"
+            [class.text-slate-400]="anioSeleccionado() !== a"
+            [class.hover:text-white]="anioSeleccionado() !== a"
+          >
+            {{ a }}
+          </button>
+        }
+      </div>
+
+      <button 
+        type="button"
+        (click)="abrirCrear()" 
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+      >
+        <i class="pi pi-plus"></i>
+        <span>Agregar Feriado</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Grilla de Feriados del Año -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 overflow-hidden">
+    <p-table 
+      [value]="feriados()" 
+      dataKey="id" 
+      [loading]="cargando()"
+      [tableStyle]="{'min-width': '100%'}"
+      styleClass="p-datatable-sm w-full"
+      responsiveLayout="scroll"
+    >
+      <ng-template #header>
+        <tr class="text-xs uppercase tracking-wider text-slate-300 border-b border-slate-800 bg-slate-950/40">
+          <th class="py-3 px-4 text-left">Fecha</th>
+          <th class="py-3 px-4 text-left">Día</th>
+          <th class="py-3 px-4 text-left">Denominación Oficial</th>
+          <th class="py-3 px-4 text-center">Tipo de Régimen</th>
+          <th class="py-3 px-4 text-center">Compensable</th>
+          <th class="py-3 px-4 text-left">Norma Legal</th>
+          <th class="py-3 px-4 text-center">Acciones</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-f>
+        <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs transition-colors">
+          
+          <!-- Fecha -->
+          <td class="py-3 px-4 font-mono font-bold text-slate-100">
+            {{ f.fechaLegible }}
+          </td>
+
+          <!-- Día Semana -->
+          <td class="py-3 px-4 text-slate-400 font-medium">
+            {{ f.diaSemana }}
+          </td>
+
+          <!-- Nombre -->
+          <td class="py-3 px-4 text-slate-200 font-semibold">
+            {{ f.nombre }}
+          </td>
+
+          <!-- Tipo Régimen -->
+          <td class="py-3 px-4 text-center">
+            @if (f.tipo === 'FERIADO_NACIONAL') {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                Feriado Nacional
+              </span>
+            } @else if (f.tipo === 'NO_LABORABLE_COMPENSABLE') {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                No Laborable (Público)
+              </span>
+            } @else {
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                Institucional
+              </span>
+            }
+          </td>
+
+          <!-- Compensable -->
+          <td class="py-3 px-4 text-center">
+            @if (f.esCompensable) {
+              <span class="text-amber-400 font-semibold text-[11px] inline-flex items-center gap-1">
+                <i class="pi pi-sync text-xs"></i> Sí (Recuperable)
+              </span>
+            } @else {
+              <span class="text-slate-500 text-[11px]">No recuperable</span>
+            }
+          </td>
+
+          <!-- Norma Legal -->
+          <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">
+            {{ f.normaLegal || 'Ley General' }}
+          </td>
+
+          <!-- Acciones -->
+          <td class="py-3 px-4 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button 
+                type="button" 
+                (click)="abrirEditar(f)"
+                pTooltip="Editar fecha"
+                class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer"
+              >
+                <i class="pi pi-pencil text-xs"></i>
+              </button>
+              <button 
+                type="button" 
+                (click)="eliminar(f.id)"
+                pTooltip="Eliminar del calendario"
+                class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 cursor-pointer"
+              >
+                <i class="pi pi-trash text-xs"></i>
+              </button>
+            </div>
+          </td>
+
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="7" class="!text-center !p-0 border-0">
+            <div class="w-full min-h-[260px] flex flex-col items-center justify-center py-10 px-4 text-center">
+              <div class="h-14 w-14 rounded-2xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-center text-indigo-400 mb-3 shadow-xl">
+                <i class="pi pi-calendar-times text-2xl"></i>
+              </div>
+              <h3 class="text-sm font-bold text-slate-100 tracking-tight mb-1">
+                No hay feriados programados para el año {{ anioSeleccionado() }}
+              </h3>
+              <p class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                Registre los feriados oficiales y decretos supremos correspondientes a este periodo anual.
+              </p>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- MODAL: Crear / Editar Feriado -->
+  <p-dialog 
+    [(visible)]="dialogFeriado" 
+    [modal]="true" 
+    [header]="esEdicion() ? 'Editar Fecha en Calendario' : 'Registrar Día No Laborable / Feriado'"
+    [style]="{ width: '460px' }"
+  >
+    <div class="space-y-3.5 pt-2 text-xs">
+      
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Fecha Festiva / No Laborable *</label>
+        <input 
+          type="date" 
+          [(ngModel)]="formFeriado.fecha"
+          class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500 cursor-pointer"
+        />
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Denominación Oficial *</label>
+        <input 
+          type="text" 
+          [(ngModel)]="formFeriado.nombre"
+          placeholder="Ej. Fiestas Patrias, Combate de Angamos..."
+          class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500"
+        />
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Tipo de Régimen *</label>
+        <select 
+          class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500 cursor-pointer"
+          [(ngModel)]="formFeriado.tipo"
+        >
+          <option value="FERIADO_NACIONAL">Feriado Nacional (Calendario Cívico)</option>
+          <option value="NO_LABORABLE_COMPENSABLE">Día No Laborable Compensable (Sector Público)</option>
+          <option value="FIESTA_INSTITUCIONAL">Día Institucional / Aniversario</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-300 mb-1">Norma Legal de Respaldo</label>
+        <input 
+          type="text" 
+          [(ngModel)]="formFeriado.normaLegal"
+          placeholder="Ej. D.S. N° 011-2026-PCM / D.L. 713"
+          class="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-white outline-none focus:border-indigo-500"
+        />
+      </div>
+
+      <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" [(ngModel)]="formFeriado.esCompensable" class="rounded accent-indigo-600" />
+          <span class="font-semibold text-slate-200 text-xs">Requiere Compensación de Horas</span>
+        </label>
+        <p class="text-[11px] text-slate-400">
+          Si está marcado, el colaborador deberá compensar estas horas laborables de acuerdo con la directiva interna.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="flex justify-end gap-2 mt-6">
+      <button type="button" (click)="dialogFeriado.set(false)" class="px-3 py-2 text-slate-400 hover:text-white text-xs cursor-pointer">Cancelar</button>
+      <button type="button" (click)="guardar()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer">Guardar Fecha</button>
+    </div>
+  </p-dialog>
+
+</div>

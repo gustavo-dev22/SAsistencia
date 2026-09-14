@@ -16,6 +16,7 @@ namespace SAsistencia.Application.Features.Turnos.DTOs
         public int MinutosRefrigerio { get; set; }
         public bool EsRotativo { get; set; }
         public bool Activo { get; set; }
+        public string DiasSemana { get; set; } = "1,2,3,4,5";
         public int TotalEmpleadosAsignados { get; set; }
     }
 
@@ -27,7 +28,8 @@ namespace SAsistencia.Application.Features.Turnos.DTOs
         int ToleranciaEntradaMinutos,
         int LimiteTardanzaMinutos,
         int MinutosRefrigerio,
-        bool EsRotativo
+        bool EsRotativo,
+        string DiasSemana
     );
 
     public record ActualizarTurnoRequest(

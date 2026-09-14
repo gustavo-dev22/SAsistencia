@@ -1,14 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SAsistencia.Application.Common.Interfaces;
+using SAsistencia.Application.Common.Providers;
+using SAsistencia.Application.Common.Services;
 using SAsistencia.Infrastructure.Persistence;
 using SAsistencia.Infrastructure.Persistence.Repositories;
 using SAsistencia.Infrastructure.Repositories;
 using SAsistencia.Infrastructure.Services;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace SAsistencia.Infrastructure
 {
@@ -21,7 +23,6 @@ namespace SAsistencia.Infrastructure
                     configuration.GetConnectionString("DefaultConnection"),
                     b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-            // 2. Registro del servicio externo SASI con HttpClient y Bypass SSL para desarrollo local
             services.AddHttpClient<ISasiAuthService, SasiAuthService>(client =>
             {
                 var baseUrl = configuration["SasiSettings:BaseUrl"] ?? "https://localhost:44337/SASI/api/";
@@ -29,7 +30,6 @@ namespace SAsistencia.Infrastructure
             })
             .ConfigurePrimaryHttpMessageHandler(() =>
             {
-                // Permite certificados autofirmados de localhost en desarrollo
                 return new HttpClientHandler
                 {
                     ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
@@ -42,6 +42,11 @@ namespace SAsistencia.Infrastructure
             services.AddScoped<ITurnoRepository, TurnoRepository>();
             services.AddScoped<IMarcacionRepository, MarcacionRepository>();
             services.AddScoped<IJustificacionRepository, JustificacionRepository>();
+            services.AddScoped<IParametroRepository, ParametroRepository>();
+            services.AddScoped<IAuditoriaMarcacionRepository, AuditoriaMarcacionRepository>();
+            services.AddScoped<IFeriadoRepository, FeriadoRepository>();
+
+            services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
             return services;
         }

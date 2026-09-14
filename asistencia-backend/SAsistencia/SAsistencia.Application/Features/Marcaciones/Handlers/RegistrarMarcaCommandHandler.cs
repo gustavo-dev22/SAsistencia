@@ -1,11 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using MediatR;
+using SAsistencia.Application.Common.Helpers;
 using SAsistencia.Application.Common.Interfaces;
+using SAsistencia.Application.Common.Providers;
 using SAsistencia.Application.Features.Marcaciones.Commands;
 using SAsistencia.Application.Features.Marcaciones.DTOs;
 using SAsistencia.Domain.Entities;
-using MediatR;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace SAsistencia.Application.Features.Marcaciones.Handlers
 {
@@ -15,23 +17,32 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
         private readonly IMarcacionRepository _marcacionRepo;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMarcacionNotifier _notifier;
+        private readonly IFeriadoRepository _feriadoRepo;
+        private readonly IParametroRepository _parametroRepo;
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         public RegistrarMarcaCommandHandler(
             IEmpleadoRepository empleadoRepo,
             IMarcacionRepository marcacionRepo,
             IUnitOfWork unitOfWork,
-            IMarcacionNotifier notifier)
+            IMarcacionNotifier notifier,
+            IFeriadoRepository feriadoRepo,
+            IParametroRepository parametroRepo,
+            IDateTimeProvider dateTimeProvider)
         {
             _empleadoRepo = empleadoRepo;
             _marcacionRepo = marcacionRepo;
             _unitOfWork = unitOfWork;
             _notifier = notifier;
+            _feriadoRepo = feriadoRepo;
+            _parametroRepo = parametroRepo;
+            _dateTimeProvider = dateTimeProvider;
         }
 
         public async Task<ResultadoMarcacionDto> Handle(RegistrarMarcaCommand request, CancellationToken cancellationToken)
         {
             var idLimpio = request.Dto.Identificador.Trim();
-            var ahora = DateTime.Now;
+            var ahoraPeru = _dateTimeProvider.AhoraPeru;
 
             // 1. Buscar colaborador con relaciones cargadas
             var empleado = await _empleadoRepo.ObtenerPorIdentificadorConRelacionesAsync(idLimpio, cancellationToken);
@@ -54,12 +65,54 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
                 };
             }
 
-            // 2. Obtener todas las marcas registradas hoy por el empleado
-            var marcasHoy = await _marcacionRepo.ObtenerMarcacionesHoyAsync(empleado.Id, ahora, cancellationToken);
+            bool esExonerado = empleado.Cargo?.ExoneradoMarcacion ?? false;
+
+            // 2. VERIFICACIÓN Y BLOQUEO DE FERIADOS
+            var feriadoHoy = await _feriadoRepo.ObtenerPorFechaAsync(ahoraPeru, cancellationToken);
+            bool bloquearFeriados = await _parametroRepo.ObtenerValorAsync("BLOQUEAR_MARCACIONES_FERIADOS", false, cancellationToken);
+
+            if (feriadoHoy != null && bloquearFeriados && !esExonerado)
+            {
+                return new ResultadoMarcacionDto
+                {
+                    Exito = false,
+                    Mensaje = $"Hoy es día no laborable ({feriadoHoy.Nombre}). Marcación no autorizada."
+                };
+            }
+
+            // 3. VERIFICACIÓN Y BLOQUEO DE DÍAS DE DESCANSO SEMANAL
+            int diaActualNumero = (int)ahoraPeru.DayOfWeek; // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+            HashSet<int> diasLaborablesSet;
+
+            if (empleado.Turno != null && !string.IsNullOrWhiteSpace(empleado.Turno.DiasSemana))
+            {
+                diasLaborablesSet = DiasSemanaHelper.ObtenerSetDias(empleado.Turno.DiasSemana);
+            }
+            else
+            {
+                var diasHabilesParam = await _parametroRepo.ObtenerValorAsync("DIAS_HABILES_SEMANA", "1,2,3,4,5", cancellationToken);
+                diasLaborablesSet = DiasSemanaHelper.ObtenerSetDias(diasHabilesParam);
+            }
+
+            bool esDiaLaborable = diasLaborablesSet.Contains(diaActualNumero);
+            bool bloquearDescansos = await _parametroRepo.ObtenerValorAsync("BLOQUEAR_MARCACIONES_DESCANSO", true, cancellationToken);
+
+            if (!esDiaLaborable && bloquearDescansos && !esExonerado)
+            {
+                return new ResultadoMarcacionDto
+                {
+                    Exito = false,
+                    Mensaje = "Hoy es su día de descanso semanal. Marcación no autorizada por su horario."
+                };
+            }
+
+            // 4. Obtener marcas registradas hoy por el empleado
+            var marcasHoy = await _marcacionRepo.ObtenerMarcacionesHoyAsync(empleado.Id, ahoraPeru, cancellationToken);
             var ultimaMarca = marcasHoy.LastOrDefault();
 
-            // A. Cooldown de seguridad (Evitar doble marca por rebote en menos de 60 segundos)
-            if (ultimaMarca != null && (ahora - ultimaMarca.FechaHoraMarcacion).TotalSeconds < 60)
+            // A. Cooldown dinámico parametrizado
+            int cooldownSecs = await _parametroRepo.ObtenerValorAsync("COOLDOWN_MARCACION_SEGUNDOS", 60, cancellationToken);
+            if (ultimaMarca != null && (ahoraPeru - ultimaMarca.FechaHoraMarcacion).TotalSeconds < cooldownSecs)
             {
                 return new ResultadoMarcacionDto
                 {
@@ -68,7 +121,7 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
                 };
             }
 
-            // B. Control de ciclo diario (Máximo 1 ENTRADA y 1 SALIDA en jornada regular)
+            // B. Control de ciclo diario (Máximo 1 Entrada y 1 Salida)
             int totalEntradas = marcasHoy.Count(m => m.TipoMarcacion == "ENTRADA");
             int totalSalidas = marcasHoy.Count(m => m.TipoMarcacion == "SALIDA");
 
@@ -81,20 +134,29 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
                 };
             }
 
-            // C. Determinar el tipo estricto de marcación
             string tipoMarcacion = totalEntradas == 0 ? "ENTRADA" : "SALIDA";
 
-            // 3. Evaluar Puntualidad con base al Turno asignado
+            // 5. Evaluar Puntualidad (si pasó los bloqueos o si bloquearDescansos está en false)
             string estadoPuntualidad = "PUNTUAL";
             int minutosTardanza = 0;
 
-            if (empleado.Cargo?.ExoneradoMarcacion == true)
+            if (feriadoHoy != null)
+            {
+                estadoPuntualidad = feriadoHoy.EsCompensable ? "NO_LABORABLE_COMPENSABLE" : "FERIADO";
+                minutosTardanza = 0;
+            }
+            else if (!esDiaLaborable)
+            {
+                estadoPuntualidad = "DESCANSO_SEMANAL";
+                minutosTardanza = 0;
+            }
+            else if (esExonerado)
             {
                 estadoPuntualidad = "EXONERADO";
             }
             else if (empleado.Turno != null && tipoMarcacion == "ENTRADA")
             {
-                var horaActualTime = ahora.TimeOfDay;
+                var horaActualTime = ahoraPeru.TimeOfDay;
                 var entradaProgramada = empleado.Turno.HoraEntrada;
                 var limiteTolerancia = entradaProgramada.Add(TimeSpan.FromMinutes(empleado.Turno.ToleranciaEntradaMinutos));
                 var limiteMaximoTardanza = entradaProgramada.Add(TimeSpan.FromMinutes(empleado.Turno.LimiteTardanzaMinutos));
@@ -110,7 +172,6 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
                 }
                 else
                 {
-                    // Pasado el límite máximo (ej. marcar de noche cuando el turno era diurno)
                     estadoPuntualidad = "FUERA_TURNO";
                     minutosTardanza = (int)Math.Ceiling((horaActualTime - entradaProgramada).TotalMinutes);
                 }
@@ -120,23 +181,24 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
                 estadoPuntualidad = "SIN_TURNO";
             }
 
-            // 4. Persistir Marcación mediante el repositorio
+            // 6. Persistir en Base de Datos
             var nuevaMarca = new Marcacion
             {
                 EmpleadoId = empleado.Id,
                 TurnoId = empleado.TurnoId,
-                FechaHoraMarcacion = ahora,
+                FechaHoraMarcacion = ahoraPeru,
                 TipoMarcacion = tipoMarcacion,
                 EstadoPuntualidad = estadoPuntualidad,
                 MinutosTardanza = minutosTardanza,
                 MetodoRegistro = request.Dto.Metodo.ToUpper(),
-                IpTerminal = request.IpTerminal
+                IpTerminal = request.IpTerminal,
+                EsManual = false
             };
 
             await _marcacionRepo.AgregarAsync(nuevaMarca, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // DISPARO EN TIEMPO REAL: Notificar al Live Monitor
+            // 7. Notificación en Tiempo Real (SignalR)
             var dtoEnVivo = new MarcacionEnVivoDto
             {
                 Id = nuevaMarca.Id,
@@ -146,12 +208,12 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
                 OficinaNombre = empleado.Oficina?.Nombre,
                 OficinaSigla = empleado.Oficina?.Sigla,
                 CargoNombre = empleado.Cargo?.Nombre,
-                Hora = ahora.ToString("HH:mm:ss"),
+                Hora = ahoraPeru.ToString("HH:mm:ss"),
                 TipoMarcacion = tipoMarcacion,
                 EstadoPuntualidad = estadoPuntualidad,
                 MinutosTardanza = minutosTardanza,
                 MetodoRegistro = request.Dto.Metodo.ToUpper(),
-                FechaHora = ahora
+                FechaHora = ahoraPeru
             };
 
             await _notifier.NotificarNuevaMarcacionAsync(dtoEnVivo, cancellationToken);
@@ -163,7 +225,7 @@ namespace SAsistencia.Application.Features.Marcaciones.Handlers
                 NombreEmpleado = empleado.NombreCompleto,
                 AreaEmpleado = empleado.Oficina != null ? $"{empleado.Oficina.Sigla} - {empleado.Oficina.Nombre}" : "Sede Central",
                 CargoEmpleado = empleado.Cargo?.Nombre ?? "Colaborador",
-                Hora = ahora.ToString("HH:mm:ss"),
+                Hora = ahoraPeru.ToString("HH:mm:ss"),
                 TipoMarcacion = tipoMarcacion,
                 EstadoPuntualidad = estadoPuntualidad,
                 MinutosTardanza = minutosTardanza

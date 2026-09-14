@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using SAsistencia.Application.Common.Interfaces;
+using SAsistencia.Application.Common.Services;
 using SAsistencia.Application.Features.Auth.Commands;
 using SAsistencia.Application.Features.Auth.DTOs;
 using System;

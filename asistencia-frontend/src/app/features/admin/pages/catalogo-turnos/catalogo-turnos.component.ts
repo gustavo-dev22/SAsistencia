@@ -41,7 +41,21 @@ export class CatalogoTurnosComponent implements OnInit {
   dialogTurno = signal<boolean>(false);
   esNuevo = signal<boolean>(true);
 
-  // Formulario
+  // Catálogo de días (1: Lun a 0: Dom)
+  diasDisponibles = [
+    { id: '1', nombre: 'Lun' },
+    { id: '2', nombre: 'Mar' },
+    { id: '3', nombre: 'Mié' },
+    { id: '4', nombre: 'Jue' },
+    { id: '5', nombre: 'Vie' },
+    { id: '6', nombre: 'Sáb' },
+    { id: '0', nombre: 'Dom' }
+  ];
+
+  // Días seleccionados en el modal (por defecto Lunes a Viernes)
+  diasSeleccionados: string[] = ['1', '2', '3', '4', '5'];
+
+  // Formulario de Turno
   turnoForm = {
     id: 0,
     nombre: '',
@@ -52,7 +66,8 @@ export class CatalogoTurnosComponent implements OnInit {
     limiteTardanzaMinutos: 30,
     minutosRefrigerio: 60,
     esRotativo: false,
-    activo: true
+    activo: true,
+    diasSemana: '1,2,3,4,5'
   };
 
   // Turnos Filtrados reactivamente
@@ -101,6 +116,7 @@ export class CatalogoTurnosComponent implements OnInit {
 
   abrirCrear(): void {
     this.esNuevo.set(true);
+    this.diasSeleccionados = ['1', '2', '3', '4', '5'];
     this.turnoForm = {
       id: 0,
       nombre: '',
@@ -111,7 +127,8 @@ export class CatalogoTurnosComponent implements OnInit {
       limiteTardanzaMinutos: 30,
       minutosRefrigerio: 60,
       esRotativo: false,
-      activo: true
+      activo: true,
+      diasSemana: '1,2,3,4,5'
     };
     this.dialogTurno.set(true);
     this.cdr.markForCheck();
@@ -119,6 +136,11 @@ export class CatalogoTurnosComponent implements OnInit {
 
   abrirEditar(t: TurnoItem): void {
     this.esNuevo.set(false);
+    
+    // Parsear la cadena de días ("1,2,3,4,5") al arreglo de checkboxes/botones
+    const diasCadena = t.diasSemana || '1,2,3,4,5';
+    this.diasSeleccionados = diasCadena.split(',').map(d => d.trim()).filter(d => d.length > 0);
+
     this.turnoForm = {
       id: t.id,
       nombre: t.nombre,
@@ -129,10 +151,44 @@ export class CatalogoTurnosComponent implements OnInit {
       limiteTardanzaMinutos: t.limiteTardanzaMinutos,
       minutosRefrigerio: t.minutosRefrigerio,
       esRotativo: t.esRotativo,
-      activo: t.activo
+      activo: t.activo,
+      diasSemana: diasCadena
     };
     this.dialogTurno.set(true);
     this.cdr.markForCheck();
+  }
+
+  toggleDia(diaId: string): void {
+    if (this.diasSeleccionados.includes(diaId)) {
+      if (this.diasSeleccionados.length > 1) {
+        this.diasSeleccionados = this.diasSeleccionados.filter(d => d !== diaId);
+      }
+    } else {
+      this.diasSeleccionados.push(diaId);
+    }
+    // Mantener sincronizado el campo diasSemana ordenado
+    this.turnoForm.diasSemana = [...this.diasSeleccionados].sort().join(',');
+  }
+
+  esDiaActivo(diaId: string): boolean {
+    return this.diasSeleccionados.includes(diaId);
+  }
+
+  // Método auxiliar para pintar las etiquetas de días en la tabla principal
+  obtenerTextoDias(diasCadena?: string): string {
+    if (!diasCadena) return 'Lun - Vie';
+    if (diasCadena === '1,2,3,4,5') return 'Lun - Vie';
+    if (diasCadena === '1,2,3,4,5,6') return 'Lun - Sáb';
+    if (diasCadena === '0,1,2,3,4,5,6') return 'Toda la semana';
+
+    const mapa: Record<string, string> = {
+      '1': 'Lun', '2': 'Mar', '3': 'Mié', '4': 'Jue', '5': 'Vie', '6': 'Sáb', '0': 'Dom'
+    };
+
+    return diasCadena
+      .split(',')
+      .map(d => mapa[d.trim()] || d)
+      .join(', ');
   }
 
   guardar(): void {
@@ -141,12 +197,23 @@ export class CatalogoTurnosComponent implements OnInit {
       return;
     }
 
+    if (this.diasSeleccionados.length === 0) {
+      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Debe seleccionar al menos un día laborable.' });
+      return;
+    }
+
+    // Asegurar valor de diasSemana
+    this.turnoForm.diasSemana = [...this.diasSeleccionados].sort().join(',');
+
     if (this.esNuevo()) {
       this.turnoService.crear(this.turnoForm).subscribe({
         next: () => {
           this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Turno registrado correctamente.' });
           this.dialogTurno.set(false);
           this.cargarTurnos();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al registrar el turno.' });
         }
       });
     } else {
@@ -155,6 +222,9 @@ export class CatalogoTurnosComponent implements OnInit {
           this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Turno actualizado correctamente.' });
           this.dialogTurno.set(false);
           this.cargarTurnos();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Fallo al actualizar el turno.' });
         }
       });
     }

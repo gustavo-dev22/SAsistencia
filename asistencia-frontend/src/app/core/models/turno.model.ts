@@ -10,4 +10,5 @@ export interface TurnoItem {
   esRotativo: boolean;
   activo: boolean;
   totalEmpleadosAsignados: number;
+  diasSemana: string;
 }

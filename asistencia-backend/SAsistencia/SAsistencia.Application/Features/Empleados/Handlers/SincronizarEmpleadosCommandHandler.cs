@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using SAsistencia.Application.Common.Interfaces;
+using SAsistencia.Application.Common.Services;
 using SAsistencia.Application.Features.Empleados.Commands;
 using SAsistencia.Domain.Entities;
 using System;
